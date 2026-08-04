@@ -1,0 +1,10 @@
+[project]
+name = "call-me-maybe"
+version = "0.1.0"
+description = "Constrained function-calling system using a local language model"
+readme = "README.md"
+authors = [
+    { name = "rrasmuss", email = "rrasmuss@student.42berlin.de" }
+]
+requires-python = ">=3.10"
+dependencies = []
