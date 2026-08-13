@@ -79,7 +79,7 @@ def test_generate_constrained_json_stops_at_token_limit() -> None:
         assert False
 
 
-def test_generate_constrained_json_rejects_wrong_schema() -> None:
+def test_generate_constrained_json_avoids_wrong_schema_token() -> None:
     model = FakeModel()
     tokenizer = FakeTokenizer()
     schema = ObjectSchema(
@@ -90,14 +90,11 @@ def test_generate_constrained_json_rejects_wrong_schema() -> None:
         required=["x"],
     )
 
-    try:
-        generate_constrained_json(
-            model,
-            tokenizer,
-            [],
-            schema,
-        )
-    except ValueError as error:
-        assert str(error) == "generated JSON does not match schema"
-    else:
-        assert False
+    result = generate_constrained_json(
+        model,
+        tokenizer,
+        [],
+        schema,
+    )
+
+    assert result == [0, 1, 2, 1, 4]

@@ -1,10 +1,13 @@
 import copy
 
-from src.json_state import JSONState
+from src.constrained_state import ConstrainedState
 from src.tokenizer import Tokenizer
 
 
-def is_valid_json_continuation(state: JSONState, text: str) -> bool:
+def is_valid_continuation(
+    state: ConstrainedState,
+    text: str,
+) -> bool:
     candidate_state = copy.deepcopy(state)
 
     for char in text:
@@ -17,16 +20,16 @@ def is_valid_json_continuation(state: JSONState, text: str) -> bool:
 
 
 def is_valid_token(
-    state: JSONState,
+    state: ConstrainedState,
     tokenizer: Tokenizer,
     token_id: int,
 ) -> bool:
     text = tokenizer.decode([token_id])
-    return is_valid_json_continuation(state, text)
+    return is_valid_continuation(state, text)
 
 
 def filter_valid_tokens(
-    state: JSONState,
+    state: ConstrainedState,
     tokenizer: Tokenizer,
     scores: list[float],
 ) -> list[tuple[int, float]]:
@@ -40,7 +43,7 @@ def filter_valid_tokens(
 
 
 def choose_best_valid_token(
-    state: JSONState,
+    state: ConstrainedState,
     tokenizer: Tokenizer,
     scores: list[float],
 ) -> int:

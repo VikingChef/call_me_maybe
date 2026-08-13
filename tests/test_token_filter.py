@@ -2,7 +2,7 @@ from src.json_state import JSONState
 from src.token_filter import (
     choose_best_valid_token,
     filter_valid_tokens,
-    is_valid_json_continuation,
+    is_valid_continuation,
     is_valid_token,
 )
 
@@ -13,7 +13,7 @@ def test_valid_continuation_is_allowed() -> None:
     for char in '{"name":':
         state.feed(char)
 
-    assert is_valid_json_continuation(state, '"Rasmus"') is True
+    assert is_valid_continuation(state, '"Rasmus"') is True
 
 
 def test_invalid_continuation_is_rejected() -> None:
@@ -22,7 +22,7 @@ def test_invalid_continuation_is_rejected() -> None:
     for char in '{"name":':
         state.feed(char)
 
-    assert is_valid_json_continuation(state, '}') is False
+    assert is_valid_continuation(state, '}') is False
 
 
 def test_candidate_does_not_change_original_state() -> None:
@@ -31,7 +31,7 @@ def test_candidate_does_not_change_original_state() -> None:
     for char in '{"name":':
         state.feed(char)
 
-    is_valid_json_continuation(state, '"Rasmus"')
+    is_valid_continuation(state, '"Rasmus"')
 
     assert state.expecting == "value"
     assert state.in_string is False

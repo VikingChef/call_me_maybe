@@ -1,5 +1,5 @@
 from src.generated_output import generated_json_matches_schema
-from src.json_state import JSONState
+from src.constrained_state import ConstrainedState
 from src.language_model import LanguageModel
 from src.token_filter import choose_best_valid_token
 from src.tokenizer import Tokenizer
@@ -12,7 +12,7 @@ def generate_constrained_json(
     schema,
     max_new_tokens: int = 100,
 ) -> list[int]:
-    state = JSONState()
+    state = ConstrainedState(schema)
     generated_token_ids = []
     generated_count = 0
 
