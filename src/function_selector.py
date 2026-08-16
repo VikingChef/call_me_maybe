@@ -1,5 +1,6 @@
 from src.language_model import LanguageModel
 from src.tokenizer import Tokenizer
+from src.errors import FunctionSelectionError, TokenLimitError
 
 
 class FunctionNameState:
@@ -48,7 +49,7 @@ def choose_function_name(
 
     while not state.complete:
         if generated_count >= max_new_tokens:
-            raise RuntimeError("maximum function-name token limit reached")
+            raise TokenLimitError("maximum function-name token limit reached")
 
         scores = model.next_token_scores(token_ids)
 
@@ -67,7 +68,9 @@ def choose_function_name(
                 valid_tokens.append((token_id, score))
 
         if not valid_tokens:
-            raise ValueError("no valid function-name tokens available")
+            raise FunctionSelectionError(
+                "no valid function-name tokens available"
+            )
 
         best_token = max(valid_tokens, key=lambda item: item[1])
         token_id = best_token[0]

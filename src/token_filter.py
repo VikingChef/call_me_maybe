@@ -2,6 +2,7 @@ import copy
 
 from src.constrained_state import ConstrainedState
 from src.tokenizer import Tokenizer
+from src.errors import NoValidTokenError
 
 
 def is_valid_continuation(
@@ -50,7 +51,7 @@ def choose_best_valid_token(
     valid_tokens = filter_valid_tokens(state, tokenizer, scores)
 
     if not valid_tokens:
-        raise ValueError("no valid tokens available")
+        raise NoValidTokenError("no valid tokens available")
 
     best_token = max(valid_tokens, key=lambda item: item[1])
     token_id = best_token[0]

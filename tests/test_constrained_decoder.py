@@ -1,5 +1,6 @@
 from src.constrained_decoder import generate_constrained_json
 from src.models import NumberSchema, ObjectSchema, StringSchema
+from src.errors import TokenLimitError
 
 
 class FakeTokenizer:
@@ -73,7 +74,7 @@ def test_generate_constrained_json_stops_at_token_limit() -> None:
             schema,
             max_new_tokens=3,
         )
-    except RuntimeError as error:
+    except TokenLimitError as error:
         assert str(error) == "maximum token limit reached"
     else:
         assert False

@@ -1,3 +1,4 @@
+from src.errors import FunctionSelectionError, TokenLimitError
 from src.function_selector import FunctionNameState, choose_function_name
 
 
@@ -76,3 +77,38 @@ def test_choose_function_name_filters_invalid_tokens() -> None:
     )
 
     assert result == "get_weather"
+
+
+def test_choose_function_name_stops_at_token_limit() -> None:
+    model = FakeModel()
+    tokenizer = FakeTokenizer()
+
+    try:
+        choose_function_name(
+            model,
+            tokenizer,
+            [],
+            ["get_weather"],
+            max_new_tokens=1,
+        )
+    except TokenLimitError as error:
+        assert str(error) == "maximum function-name token limit reached"
+    else:
+        assert False
+
+
+def test_choose_function_name_raises_when_no_tokens_are_valid() -> None:
+    model = FakeModel()
+    tokenizer = FakeTokenizer()
+
+    try:
+        choose_function_name(
+            model,
+            tokenizer,
+            [],
+            ["send_email"],
+        )
+    except FunctionSelectionError as error:
+        assert str(error) == "no valid function-name tokens available"
+    else:
+        assert False
