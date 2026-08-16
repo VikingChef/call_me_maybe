@@ -1,5 +1,11 @@
 import json
 
+from src.errors import (
+    FunctionSelectionError,
+    NoValidTokenError,
+    SchemaMismatchError,
+    TokenLimitError,
+)
 from src.constrained_decoder import generate_constrained_json
 from src.function_selector import choose_function_name
 from src.language_model import LanguageModel
@@ -42,3 +48,39 @@ def generate_function_call(
     parameters = json.loads(parameter_text)
 
     return selected_name, parameters
+
+
+def generate_function_call_with_retries(
+    model: LanguageModel,
+    tokenizer: Tokenizer,
+    token_ids: list[int],
+    functions: list[FunctionDefinition],
+    max_attempts: int = 3,
+) -> tuple[str, dict]:
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+    
+    retryable_errors = (
+        FunctionSelectionError,
+        NoValidTokenError,
+        SchemaMismatchError,
+        TokenLimitError,
+    )
+
+    last_error = None
+
+    for _ in range(max_attempts):
+        attempt_token_ids = token_ids.copy()
+
+        try:
+            return generate_function_call(
+                model,
+                tokenizer,
+                attempt_token_ids,
+                functions,
+            )
+        except retryable_errors as error:
+            last_error = error
+
+    if last_error is not None:
+        raise last_error
