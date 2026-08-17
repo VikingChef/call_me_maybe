@@ -1,12 +1,26 @@
 import json
 
+from pydantic import ValidationError
+
+from src.errors import (
+    InputFileError,
+    InputJSONError,
+    InputValidationError,
+)
 from src.models import FunctionDefinition, PromptInput
 
 
 def load_json_file(path):
-    with open(path) as file:
-        data = json.load(file, object_pairs_hook=reject_duplicate_keys)
-    return data
+    try:
+        with open(path) as file:
+            return json.load(
+                file,
+                object_pairs_hook=reject_duplicate_keys,
+            )
+    except json.JSONDecodeError as error:
+        raise InputJSONError("invalid JSON") from error
+    except OSError as error:
+        raise InputFileError(f"cannot read file: {path}") from error
 
 
 def reject_duplicate_keys(pairs):
@@ -14,7 +28,7 @@ def reject_duplicate_keys(pairs):
     result = {}
     for key, value in pairs:
         if key in seen:
-            raise ValueError(f"duplicate key: {key}")
+            raise InputJSONError(f"duplicate key: {key}")
         seen.add(key)
         result[key] = value
     return result
@@ -22,9 +36,21 @@ def reject_duplicate_keys(pairs):
 
 def load_prompt_input(path):
     data = load_json_file(path)
-    return PromptInput.model_validate(data)
+
+    try:
+        return PromptInput.model_validate(data)
+    except ValidationError as error:
+        raise InputValidationError(
+            "invalid prompt input"
+        ) from error
 
 
 def load_function_definition(path):
     data = load_json_file(path)
-    return FunctionDefinition.model_validate(data)
+
+    try:
+        return FunctionDefinition.model_validate(data)
+    except ValidationError as error:
+        raise InputValidationError(
+            "invalid function definition"
+        ) from error

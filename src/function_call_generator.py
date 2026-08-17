@@ -59,7 +59,7 @@ def generate_function_call_with_retries(
 ) -> tuple[str, dict]:
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
-    
+
     retryable_errors = (
         FunctionSelectionError,
         NoValidTokenError,
@@ -82,5 +82,5 @@ def generate_function_call_with_retries(
         except retryable_errors as error:
             last_error = error
 
-    if last_error is not None:
-        raise last_error
+    assert last_error is not None
+    raise last_error

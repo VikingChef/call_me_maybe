@@ -1,6 +1,10 @@
 import pytest
-import json
-from pydantic import ValidationError
+
+from src.errors import (
+    InputFileError,
+    InputJSONError,
+    InputValidationError,
+)
 
 from src.input_loader import (
     load_function_definition,
@@ -20,7 +24,7 @@ def test_json_file_malformed(tmp_path) -> None:
     file_path = tmp_path / "input.json"
     file_path.write_text('{"prompt": "Hello"')
 
-    with pytest.raises(json.JSONDecodeError):
+    with pytest.raises(InputJSONError):
         load_json_file(file_path)
 
 
@@ -29,7 +33,7 @@ def test_json_file_rejects_duplicate_keys(tmp_path) -> None:
     file_path.write_text(
         '{"prompt": "Hello", "prompt": "Goodbye"}'
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(InputJSONError):
         load_json_file(file_path)
 
 
@@ -83,5 +87,12 @@ def test_loaded_json_rejects_invalid_functiondefinition(tmp_path) -> None:
         }
         """
     )
-    with pytest.raises(ValidationError):
+    with pytest.raises(InputValidationError):
         load_function_definition(file_path)
+
+
+def test_missing_json_file_is_rejected(tmp_path) -> None:
+    file_path = tmp_path / "missing.json"
+
+    with pytest.raises(InputFileError):
+        load_json_file(file_path)
