@@ -45,3 +45,18 @@ def test_generated_json_with_wrong_schema_is_rejected() -> None:
         '{"age":"forty-five"}',
         schema,
     ) is False
+
+
+def test_generated_json_rejects_duplicate_keys() -> None:
+    schema = ObjectSchema(
+        type="object",
+        properties={
+            "age": NumberSchema(type="number"),
+        },
+        required=["age"],
+    )
+
+    assert generated_json_matches_schema(
+        '{"age":45,"age":46}',
+        schema,
+    ) is False
