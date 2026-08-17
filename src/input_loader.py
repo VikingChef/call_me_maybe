@@ -45,11 +45,49 @@ def load_prompt_input(path):
         ) from error
 
 
+def load_prompt_inputs(path):
+    data = load_json_file(path)
+
+    if not isinstance(data, list):
+        raise InputValidationError(
+            "prompt input must be a list"
+        )
+
+    try:
+        return [
+            PromptInput.model_validate(item)
+            for item in data
+        ]
+    except ValidationError as error:
+        raise InputValidationError(
+            "invalid prompt input"
+        ) from error
+
+
 def load_function_definition(path):
     data = load_json_file(path)
 
     try:
         return FunctionDefinition.model_validate(data)
+    except ValidationError as error:
+        raise InputValidationError(
+            "invalid function definition"
+        ) from error
+
+
+def load_function_definitions(path):
+    data = load_json_file(path)
+
+    if not isinstance(data, list):
+        raise InputValidationError(
+            "function definitions must be a list"
+        )
+
+    try:
+        return [
+            FunctionDefinition.model_validate(item)
+            for item in data
+        ]
     except ValidationError as error:
         raise InputValidationError(
             "invalid function definition"
