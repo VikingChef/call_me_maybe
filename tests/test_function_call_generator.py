@@ -199,3 +199,93 @@ def test_retry_rejects_invalid_max_attempts() -> None:
         assert str(error) == "max_attempts must be at least 1"
     else:
         assert False
+
+
+def test_generate_function_call_rejects_empty_function_list() -> None:
+    model = FakeModel()
+    tokenizer = FakeTokenizer()
+
+    try:
+        generate_function_call(
+            model,
+            tokenizer,
+            [],
+            [],
+        )
+    except ValueError as error:
+        assert str(error) == "at least one function definition is required"
+    else:
+        assert False
+
+
+def test_generate_function_call_rejects_duplicate_function_names() -> None:
+    model = FakeModel()
+    tokenizer = FakeTokenizer()
+
+    function_one = FunctionDefinition(
+        name="get_age",
+        description="Return an age.",
+        parameters=ObjectSchema(
+            type="object",
+            properties={
+                "age": NumberSchema(type="number"),
+            },
+            required=["age"],
+        ),
+        returns=NumberSchema(type="number"),
+    )
+
+    function_two = FunctionDefinition(
+        name="get_age",
+        description="Return another age.",
+        parameters=ObjectSchema(
+            type="object",
+            properties={
+                "age": NumberSchema(type="number"),
+            },
+            required=["age"],
+        ),
+        returns=NumberSchema(type="number"),
+    )
+
+    try:
+        generate_function_call(
+            model,
+            tokenizer,
+            [],
+            [function_one, function_two],
+        )
+    except ValueError as error:
+        assert str(error) == "function names must be unique"
+    else:
+        assert False
+
+
+def test_generate_function_call_rejects_empty_function_name() -> None:
+    model = FakeModel()
+    tokenizer = FakeTokenizer()
+
+    function = FunctionDefinition(
+        name="",
+        description="Return an age.",
+        parameters=ObjectSchema(
+            type="object",
+            properties={
+                "age": NumberSchema(type="number"),
+            },
+            required=["age"],
+        ),
+        returns=NumberSchema(type="number"),
+    )
+
+    try:
+        generate_function_call(
+            model,
+            tokenizer,
+            [],
+            [function],
+        )
+    except ValueError as error:
+        assert str(error) == "function names must not be empty"
+    else:
+        assert False

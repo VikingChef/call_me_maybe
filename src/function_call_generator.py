@@ -19,7 +19,16 @@ def generate_function_call(
     token_ids: list[int],
     functions: list[FunctionDefinition],
 ) -> tuple[str, dict]:
+    if not functions:
+        raise ValueError("at least one function definition is required")
+
     function_names = [function.name for function in functions]
+
+    if len(function_names) != len(set(function_names)):
+        raise ValueError("function names must be unique")
+
+    if any(name == "" for name in function_names):
+        raise ValueError("function names must not be empty")
 
     selected_name = choose_function_name(
         model,
