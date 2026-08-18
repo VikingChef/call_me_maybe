@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    field_validator,
+    model_validator,
+)
 
 
 class StrictModel(BaseModel):
@@ -78,6 +83,29 @@ class FunctionDefinition(StrictModel):
         | ArraySchema
         | ObjectSchema
     )
+
+    @field_validator("parameters", mode="before")
+    @classmethod
+    def normalize_parameters(cls, value):
+        if isinstance(value, ObjectSchema):
+            return value
+
+        if (
+            isinstance(value, dict)
+            and value.get("type") == "object"
+            and isinstance(value.get("properties"), dict)
+            and isinstance(value.get("required"), list)
+        ):
+            return value
+
+        if isinstance(value, dict):
+            return {
+                "type": "object",
+                "properties": value,
+                "required": list(value),
+            }
+
+        return value
 
 
 class PromptInput(StrictModel):

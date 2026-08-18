@@ -1,9 +1,19 @@
 import argparse
+import json
+from pathlib import Path
 
 from src.input_loader import (
     load_function_definitions,
     load_prompt_inputs,
 )
+
+from src.llm_sdk_adapter import LLMSDKAdapter
+
+from src.function_call_generator import generate_function_call_with_retries
+from src.language_model import LanguageModel
+from src.models import FunctionDefinition, PromptInput
+from src.prompt_builder import build_model_prompt
+from src.tokenizer import Tokenizer
 
 
 def parse_args():
@@ -33,5 +43,87 @@ def load_inputs(args):
     return functions, prompts
 
 
+def generate_result(
+    model: LanguageModel,
+    tokenizer: Tokenizer,
+    prompt: PromptInput,
+    functions: list[FunctionDefinition],
+) -> dict[str, object]:
+    model_prompt = build_model_prompt(
+        prompt,
+        functions,
+    )
+    token_ids = tokenizer.encode(model_prompt)
+
+    name, parameters = generate_function_call_with_retries(
+        model,
+        tokenizer,
+        token_ids,
+        functions,
+    )
+
+    return {
+        "prompt": prompt.prompt,
+        "name": name,
+        "parameters": parameters,
+    }
+
+
+def generate_results(
+    model: LanguageModel,
+    tokenizer: Tokenizer,
+    prompts: list[PromptInput],
+    functions: list[FunctionDefinition],
+) -> list[dict[str, object]]:
+    return [
+        generate_result(
+            model,
+            tokenizer,
+            prompt,
+            functions,
+        )
+        for prompt in prompts
+    ]
+
+
+def write_results(
+    output_path,
+    results: list[dict[str, object]],
+) -> None:
+    output_path = Path(output_path)
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with open(output_path, "w") as file:
+        json.dump(
+            results,
+            file,
+            indent=2,
+        )
+
+
+def main() -> None:
+    args = parse_args()
+
+    functions, prompts = load_inputs(args)
+
+    adapter = LLMSDKAdapter()
+
+    results = generate_results(
+        adapter,
+        adapter,
+        prompts,
+        functions,
+    )
+
+    write_results(
+        args.output,
+        results,
+    )
+
+
 if __name__ == "__main__":
-    parse_args()
+    main()

@@ -248,3 +248,31 @@ def test_promptinput_valid() -> None:
         prompt="What is the weather in Berlin?"
     )
     assert input_data.prompt == "What is the weather in Berlin?"
+
+
+def test_functiondefinition_accepts_source_parameter_format() -> None:
+    function = FunctionDefinition.model_validate(
+        {
+            "name": "fn_add_numbers",
+            "description": (
+                "Add two numbers together and return their sum."
+            ),
+            "parameters": {
+                "a": {
+                    "type": "number",
+                },
+                "b": {
+                    "type": "number",
+                },
+            },
+            "returns": {
+                "type": "number",
+            },
+        }
+    )
+
+    assert function.parameters.type == "object"
+    assert set(function.parameters.properties) == {"a", "b"}
+    assert function.parameters.properties["a"].type == "number"
+    assert function.parameters.properties["b"].type == "number"
+    assert function.parameters.required == ["a", "b"]

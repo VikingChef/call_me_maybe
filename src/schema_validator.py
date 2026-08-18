@@ -1,3 +1,5 @@
+import math
+
 from src.models import (
     ArraySchema,
     BooleanSchema,
@@ -13,7 +15,16 @@ def value_matches_schema(value, schema) -> bool:
         return isinstance(value, str)
 
     if isinstance(schema, NumberSchema):
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if isinstance(value, bool):
+            return False
+
+        if isinstance(value, int):
+            return True
+
+        if isinstance(value, float):
+            return math.isfinite(value)
+
+        return False
 
     if isinstance(schema, BooleanSchema):
         return isinstance(value, bool)

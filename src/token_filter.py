@@ -48,12 +48,14 @@ def choose_best_valid_token(
     tokenizer: Tokenizer,
     scores: list[float],
 ) -> int:
-    valid_tokens = filter_valid_tokens(state, tokenizer, scores)
+    ranked_token_ids = sorted(
+        range(len(scores)),
+        key=lambda token_id: scores[token_id],
+        reverse=True,
+    )
 
-    if not valid_tokens:
-        raise NoValidTokenError("no valid tokens available")
+    for token_id in ranked_token_ids:
+        if is_valid_token(state, tokenizer, token_id):
+            return token_id
 
-    best_token = max(valid_tokens, key=lambda item: item[1])
-    token_id = best_token[0]
-
-    return token_id
+    raise NoValidTokenError("no valid tokens available")
