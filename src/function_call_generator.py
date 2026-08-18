@@ -9,7 +9,11 @@ from src.errors import (
 from src.constrained_decoder import generate_constrained_json
 from src.function_selector import choose_function_name
 from src.language_model import LanguageModel
-from src.models import FunctionDefinition
+from src.models import FunctionDefinition, PromptInput
+from src.prompt_builder import (
+    build_model_prompt,
+    build_parameter_prompt,
+)
 from src.tokenizer import Tokenizer
 
 
@@ -93,3 +97,51 @@ def generate_function_call_with_retries(
 
     assert last_error is not None
     raise last_error
+
+
+def generate_prompt_function_call(
+    model: LanguageModel,
+    tokenizer: Tokenizer,
+    prompt: PromptInput,
+    functions: list[FunctionDefinition],
+) -> tuple[str, dict]:
+    selection_prompt = build_model_prompt(
+        prompt,
+        functions,
+    )
+    selection_token_ids = tokenizer.encode(selection_prompt)
+
+    function_names = [function.name for function in functions]
+
+    selected_name = choose_function_name(
+        model,
+        tokenizer,
+        selection_token_ids,
+        function_names,
+    )
+
+    selected_function = next(
+        function
+        for function in functions
+        if function.name == selected_name
+    )
+
+    parameter_prompt = build_parameter_prompt(
+        prompt,
+        selected_function,
+    )
+    parameter_token_ids = tokenizer.encode(parameter_prompt)
+    parameter_start = len(parameter_token_ids)
+
+    generate_constrained_json(
+        model,
+        tokenizer,
+        parameter_token_ids,
+        selected_function.parameters,
+    )
+
+    generated_parameter_ids = parameter_token_ids[parameter_start:]
+    parameter_text = tokenizer.decode(generated_parameter_ids)
+    parameters = json.loads(parameter_text)
+
+    return selected_name, parameters

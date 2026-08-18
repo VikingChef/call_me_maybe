@@ -9,10 +9,9 @@ from src.input_loader import (
 
 from src.llm_sdk_adapter import LLMSDKAdapter
 
-from src.function_call_generator import generate_function_call_with_retries
+from src.function_call_generator import generate_prompt_function_call
 from src.language_model import LanguageModel
 from src.models import FunctionDefinition, PromptInput
-from src.prompt_builder import build_model_prompt
 from src.tokenizer import Tokenizer
 
 
@@ -49,16 +48,10 @@ def generate_result(
     prompt: PromptInput,
     functions: list[FunctionDefinition],
 ) -> dict[str, object]:
-    model_prompt = build_model_prompt(
-        prompt,
-        functions,
-    )
-    token_ids = tokenizer.encode(model_prompt)
-
-    name, parameters = generate_function_call_with_retries(
+    name, parameters = generate_prompt_function_call(
         model,
         tokenizer,
-        token_ids,
+        prompt,
         functions,
     )
 

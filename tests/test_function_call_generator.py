@@ -2,11 +2,13 @@ from src.errors import FunctionSelectionError
 from src.function_call_generator import (
     generate_function_call,
     generate_function_call_with_retries,
+    generate_prompt_function_call,
 )
 from src.models import (
     FunctionDefinition,
     NumberSchema,
     ObjectSchema,
+    PromptInput,
 )
 
 
@@ -289,3 +291,85 @@ def test_generate_function_call_rejects_empty_function_name() -> None:
         assert str(error) == "function names must not be empty"
     else:
         assert False
+
+
+def test_generate_prompt_function_call_uses_separate_contexts(
+    monkeypatch,
+) -> None:
+    class PromptTokenizer:
+        def encode(self, text: str) -> list[int]:
+            if text == "SELECTION":
+                return [10]
+
+            if text == "PARAMETERS":
+                return [20]
+
+            raise AssertionError(f"unexpected prompt: {text}")
+
+        def decode(self, token_ids: list[int]) -> str:
+            if token_ids == [99]:
+                return '{"age":45}'
+
+            return ""
+
+    function = FunctionDefinition(
+        name="get_age",
+        description="Return an age.",
+        parameters=ObjectSchema(
+            type="object",
+            properties={
+                "age": NumberSchema(type="number"),
+            },
+            required=["age"],
+        ),
+        returns=NumberSchema(type="number"),
+    )
+    prompt = PromptInput(prompt="What age?")
+
+    monkeypatch.setattr(
+        "src.function_call_generator.build_model_prompt",
+        lambda prompt, functions: "SELECTION",
+    )
+    monkeypatch.setattr(
+        "src.function_call_generator.build_parameter_prompt",
+        lambda prompt, function: "PARAMETERS",
+    )
+
+    def fake_choose_function_name(
+        model,
+        tokenizer,
+        token_ids,
+        function_names,
+    ):
+        assert token_ids == [10]
+        assert function_names == ["get_age"]
+        return "get_age"
+
+    monkeypatch.setattr(
+        "src.function_call_generator.choose_function_name",
+        fake_choose_function_name,
+    )
+
+    def fake_generate_constrained_json(
+        model,
+        tokenizer,
+        token_ids,
+        schema,
+    ):
+        assert token_ids == [20]
+        assert schema == function.parameters
+        token_ids.append(99)
+
+    monkeypatch.setattr(
+        "src.function_call_generator.generate_constrained_json",
+        fake_generate_constrained_json,
+    )
+
+    result = generate_prompt_function_call(
+        object(),
+        PromptTokenizer(),
+        prompt,
+        [function],
+    )
+
+    assert result == ("get_age", {"age": 45})
