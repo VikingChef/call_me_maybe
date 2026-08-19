@@ -11,6 +11,7 @@ from src.models import FunctionDefinition, PromptInput
 
 
 def load_json_file(path):
+    """Load JSON from a file while rejecting malformed or duplicate data."""
     try:
         with open(path) as file:
             return json.load(
@@ -24,6 +25,7 @@ def load_json_file(path):
 
 
 def reject_duplicate_keys(pairs):
+    """Build a JSON object while rejecting duplicate keys."""
     seen = set()
     result = {}
     for key, value in pairs:
@@ -35,6 +37,7 @@ def reject_duplicate_keys(pairs):
 
 
 def load_prompt_input(path):
+    """Load and validate one prompt input from a JSON file."""
     data = load_json_file(path)
 
     try:
@@ -46,6 +49,7 @@ def load_prompt_input(path):
 
 
 def load_prompt_inputs(path):
+    """Load and validate a list of prompt inputs from a JSON file."""
     data = load_json_file(path)
 
     if not isinstance(data, list):
@@ -65,6 +69,7 @@ def load_prompt_inputs(path):
 
 
 def load_function_definition(path):
+    """Load and validate one function definition from a JSON file."""
     data = load_json_file(path)
 
     try:
@@ -76,6 +81,7 @@ def load_function_definition(path):
 
 
 def load_function_definitions(path):
+    """Load and validate a list of function definitions from a JSON file."""
     data = load_json_file(path)
 
     if not isinstance(data, list):

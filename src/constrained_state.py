@@ -3,16 +3,21 @@ from src.schema_state import SchemaState
 
 
 class ConstrainedState:
+    """Combine JSON syntax state with schema validation state."""
+
     def __init__(self, schema):
+        """Create JSON and schema states for constrained generation."""
         self.json = JSONState()
         self.schema = SchemaState(schema)
         self.invalid = False
 
     @property
     def complete(self) -> bool:
+        """Return whether the JSON state has reached a complete value."""
         return self.json.complete
 
     def feed(self, char: str) -> None:
+        """Feed one character into both JSON and schema validation states."""
         if self.invalid:
             return
 

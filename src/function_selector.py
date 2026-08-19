@@ -4,13 +4,17 @@ from src.errors import FunctionSelectionError, TokenLimitError
 
 
 class FunctionNameState:
+    """Track whether generated text can still become a valid function name."""
+
     def __init__(self, function_names: list[str]):
+        """Create state for the available function names."""
         self.function_names = function_names
         self.text = ""
         self.invalid = False
         self.complete = False
 
     def feed(self, text: str) -> None:
+        """Add generated text and update validity and completion state."""
         if self.invalid or self.complete:
             return
 
@@ -44,6 +48,7 @@ def choose_function_name(
     function_names: list[str],
     max_new_tokens: int = 50,
 ) -> str:
+    """Generate the highest-scoring valid function name token by token."""
     state = FunctionNameState(function_names)
     generated_count = 0
 

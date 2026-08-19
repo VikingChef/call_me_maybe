@@ -65,5 +65,6 @@ def test_build_parameter_prompt_uses_only_selected_function() -> None:
     assert "Greet shrek" in result
     assert "fn_greet" in result
     assert "Generate a greeting message for a person by name." in result
-    assert "name:string" in result
+    assert '"name"' in result
+    assert '"type": "string"' in result
     assert result.endswith("Parameter values:")

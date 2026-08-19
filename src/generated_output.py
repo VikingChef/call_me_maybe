@@ -4,6 +4,7 @@ from src.schema_validator import value_matches_schema
 
 
 def reject_duplicate_keys(pairs):
+    """Build a JSON object while rejecting duplicate keys."""
     seen = set()
     result = {}
 
@@ -18,6 +19,7 @@ def reject_duplicate_keys(pairs):
 
 
 def generated_json_matches_schema(text: str, schema) -> bool:
+    """Return whether generated text is valid JSON matching the schema."""
     try:
         value = json.loads(
             text,

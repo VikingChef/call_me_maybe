@@ -23,6 +23,7 @@ def generate_function_call(
     token_ids: list[int],
     functions: list[FunctionDefinition],
 ) -> tuple[str, dict]:
+    """Generate a function name and schema-valid parameters from token IDs."""
     if not functions:
         raise ValueError("at least one function definition is required")
 
@@ -70,6 +71,7 @@ def generate_function_call_with_retries(
     functions: list[FunctionDefinition],
     max_attempts: int = 3,
 ) -> tuple[str, dict]:
+    """Retry function-call generation after recoverable generation errors."""
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
 
@@ -105,6 +107,7 @@ def generate_prompt_function_call(
     prompt: PromptInput,
     functions: list[FunctionDefinition],
 ) -> tuple[str, dict]:
+    """Generate a function call in separate selection and parameter stages."""
     selection_prompt = build_model_prompt(
         prompt,
         functions,
@@ -145,3 +148,38 @@ def generate_prompt_function_call(
     parameters = json.loads(parameter_text)
 
     return selected_name, parameters
+
+
+def generate_prompt_function_call_with_retries(
+    model: LanguageModel,
+    tokenizer: Tokenizer,
+    prompt: PromptInput,
+    functions: list[FunctionDefinition],
+    max_attempts: int = 3,
+) -> tuple[str, dict]:
+    """Retry prompt-aware generation after recoverable generation errors."""
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+
+    retryable_errors = (
+        FunctionSelectionError,
+        NoValidTokenError,
+        SchemaMismatchError,
+        TokenLimitError,
+    )
+
+    last_error = None
+
+    for _ in range(max_attempts):
+        try:
+            return generate_prompt_function_call(
+                model,
+                tokenizer,
+                prompt,
+                functions,
+            )
+        except retryable_errors as error:
+            last_error = error
+
+    assert last_error is not None
+    raise last_error

@@ -1,5 +1,8 @@
 class JSONState:
+    """Track whether generated characters still form valid JSON syntax."""
+
     def __init__(self):
+        """Create a fresh JSON parser state."""
         self.stack = []
         self.in_string = False
         self.escape_next = False
@@ -12,6 +15,9 @@ class JSONState:
         self.number_buffer = ""
 
     def number_status(self, text: str) -> tuple[bool, bool]:
+        """Return whether text is a valid JSON number prefix
+        and a complete number.
+        """
         index = 0
         length = len(text)
 
@@ -77,6 +83,7 @@ class JSONState:
         return False, False
 
     def feed(self, char: str) -> None:
+        """Feed one character into the JSON syntax state machine."""
         if self.invalid:
             return
 

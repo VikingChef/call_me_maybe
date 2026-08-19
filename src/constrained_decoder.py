@@ -13,6 +13,7 @@ def generate_constrained_json(
     schema,
     max_new_tokens: int = 100,
 ) -> list[int]:
+    """Generate schema-valid JSON by choosing one valid token at a time."""
     state = ConstrainedState(schema)
     generated_token_ids = []
     generated_count = 0

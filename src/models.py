@@ -11,6 +11,8 @@ from pydantic import (
 
 
 class StrictModel(BaseModel):
+    """Base model that requires strict types and rejects extra fields."""
+
     model_config = ConfigDict(
         strict=True,
         extra="forbid",
@@ -18,22 +20,32 @@ class StrictModel(BaseModel):
 
 
 class StringSchema(StrictModel):
+    """Represent a JSON string schema."""
+
     type: Literal["string"]
 
 
 class NumberSchema(StrictModel):
+    """Represent a JSON number schema."""
+
     type: Literal["number"]
 
 
 class BooleanSchema(StrictModel):
+    """Represent a JSON boolean schema."""
+
     type: Literal["boolean"]
 
 
 class NullSchema(StrictModel):
+    """Represent a JSON null schema."""
+
     type: Literal["null"]
 
 
 class ArraySchema(StrictModel):
+    """Represent a JSON array schema and the schema of its items."""
+
     type: Literal["array"]
     items: (
         StringSchema
@@ -46,6 +58,8 @@ class ArraySchema(StrictModel):
 
 
 class ObjectSchema(StrictModel):
+    """Represent a JSON object schema with properties and required keys."""
+
     type: Literal["object"]
     properties: dict[
         str,
@@ -60,6 +74,7 @@ class ObjectSchema(StrictModel):
 
     @model_validator(mode="after")
     def validate_required_properties(self) -> ObjectSchema:
+        """Validate consistency between object properties and required keys."""
         missing = set(self.required) - set(self.properties)
         if missing:
             raise ValueError("required property is missing from properties")
@@ -72,6 +87,8 @@ class ObjectSchema(StrictModel):
 
 
 class FunctionDefinition(StrictModel):
+    """Represent a function and its parameter and return schemas."""
+
     name: str
     description: str
     parameters: ObjectSchema
@@ -87,6 +104,7 @@ class FunctionDefinition(StrictModel):
     @field_validator("parameters", mode="before")
     @classmethod
     def normalize_parameters(cls, value):
+        """Convert flat parameter definitions into an object schema."""
         if isinstance(value, ObjectSchema):
             return value
 
@@ -109,4 +127,6 @@ class FunctionDefinition(StrictModel):
 
 
 class PromptInput(StrictModel):
+    """Represent one user prompt loaded from the input data."""
+
     prompt: str

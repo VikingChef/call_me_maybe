@@ -1,38 +1,38 @@
 class CallMeMaybeError(Exception):
-    pass
+    """Base exception for errors raised by Call Me Maybe."""
 
 
 class GenerationError(CallMeMaybeError):
-    pass
+    """Base exception for failures during constrained generation."""
 
 
 class NoValidTokenError(GenerationError):
-    pass
+    """Raised when no possible next token satisfies the constraints."""
 
 
 class TokenLimitError(GenerationError):
-    pass
+    """Raised when generation reaches its maximum token limit."""
 
 
 class SchemaMismatchError(GenerationError):
-    pass
+    """Raised when generated data does not match the required schema."""
 
 
 class FunctionSelectionError(CallMeMaybeError):
-    pass
+    """Raised when the model cannot select a valid function."""
 
 
 class InputError(CallMeMaybeError):
-    pass
+    """Base exception for errors while reading or validating input."""
 
 
 class InputFileError(InputError):
-    pass
+    """Raised when an input file cannot be read."""
 
 
 class InputJSONError(InputError):
-    pass
+    """Raised when an input file does not contain valid JSON."""
 
 
 class InputValidationError(InputError):
-    pass
+    """Raised when parsed input does not match the expected models."""

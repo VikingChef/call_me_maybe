@@ -9,7 +9,10 @@ from src.models import (
 
 
 class SchemaState:
+    """Track whether generated JSON still matches the required schema."""
+
     def __init__(self, schema):
+        """Create schema state for constrained generation."""
         self.schema = schema
         self.current_schema = schema
         self.stack = []
@@ -17,6 +20,7 @@ class SchemaState:
         self.invalid = False
 
     def valid_value_starts(self) -> set[str]:
+        """Return characters that may start a value for the current schema."""
         schema = self.current_schema
 
         if isinstance(schema, StringSchema):
@@ -40,6 +44,7 @@ class SchemaState:
         return set()
 
     def enter_object(self) -> None:
+        """Enter an object and begin tracking its keys."""
         if not isinstance(self.current_schema, ObjectSchema):
             self.invalid = True
             return
@@ -53,6 +58,7 @@ class SchemaState:
         self.key_buffer = ""
 
     def enter_array(self) -> None:
+        """Enter an array and switch to its item schema."""
         if not isinstance(self.current_schema, ArraySchema):
             self.invalid = True
             return
@@ -66,6 +72,7 @@ class SchemaState:
         self.current_schema = self.current_schema.items
 
     def finish_value(self) -> None:
+        """Restore the expected schema after completing a value."""
         if not self.stack:
             return
 
@@ -80,6 +87,7 @@ class SchemaState:
             self.current_schema = parent_schema
 
     def exit_container(self) -> None:
+        """Leave the current object or array and restore its parent schema."""
         if not self.stack:
             self.invalid = True
             return
@@ -98,6 +106,7 @@ class SchemaState:
             self.current_schema = parent_schema
 
     def valid_key_prefix(self, prefix: str) -> bool:
+        """Return whether a key prefix can become an unused valid property."""
         if not self.stack:
             return False
 
@@ -115,6 +124,7 @@ class SchemaState:
         )
 
     def start_key(self) -> None:
+        """Begin collecting a property name for the current object."""
         if not self.stack:
             self.invalid = True
             return
@@ -128,12 +138,14 @@ class SchemaState:
         self.key_buffer = ""
 
     def add_key_character(self, char: str) -> None:
+        """Add one character to the current property name."""
         self.key_buffer += char
 
         if not self.valid_key_prefix(self.key_buffer):
             self.invalid = True
 
     def finish_key(self) -> None:
+        """Finish a property name and switch to that property's schema."""
         if not self.stack:
             self.invalid = True
             return
@@ -159,6 +171,7 @@ class SchemaState:
         self.key_buffer = ""
 
     def required_keys_satisfied(self) -> bool:
+        """Return whether all required keys have appeared in the object."""
         if not self.stack:
             return True
 

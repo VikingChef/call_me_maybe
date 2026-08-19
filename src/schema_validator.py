@@ -11,6 +11,7 @@ from src.models import (
 
 
 def value_matches_schema(value, schema) -> bool:
+    """Return whether a Python value matches the given schema."""
     if isinstance(schema, StringSchema):
         return isinstance(value, str)
 
