@@ -1,11 +1,11 @@
 from src.json_state import JSONState
-from src.schema_state import SchemaState
+from src.schema_state import Schema, SchemaState
 
 
 class ConstrainedState:
     """Combine JSON syntax state with schema validation state."""
 
-    def __init__(self, schema):
+    def __init__(self, schema: Schema) -> None:
         """Create JSON and schema states for constrained generation."""
         self.json = JSONState()
         self.schema = SchemaState(schema)

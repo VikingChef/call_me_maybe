@@ -16,7 +16,7 @@ from src.models import FunctionDefinition, PromptInput
 from src.tokenizer import Tokenizer
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for input and output file paths."""
     parser = argparse.ArgumentParser()
 
@@ -35,7 +35,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_inputs(args):
+def load_inputs(
+    args: argparse.Namespace,
+) -> tuple[list[FunctionDefinition], list[PromptInput]]:
     """Load and validate function definitions and prompt inputs."""
     functions = load_function_definitions(
         args.functions_definition
@@ -85,7 +87,7 @@ def generate_results(
 
 
 def write_results(
-    output_path,
+    output_path: str | Path,
     results: list[dict[str, object]],
 ) -> None:
     """Write generated results to the requested JSON output file."""

@@ -1,12 +1,32 @@
 import json
 
+from src.models import (
+    ArraySchema,
+    BooleanSchema,
+    NullSchema,
+    NumberSchema,
+    ObjectSchema,
+    StringSchema,
+)
 from src.schema_validator import value_matches_schema
 
 
-def reject_duplicate_keys(pairs):
+Schema = (
+    StringSchema
+    | NumberSchema
+    | BooleanSchema
+    | NullSchema
+    | ArraySchema
+    | ObjectSchema
+)
+
+
+def reject_duplicate_keys(
+    pairs: list[tuple[str, object]],
+) -> dict[str, object]:
     """Build a JSON object while rejecting duplicate keys."""
-    seen = set()
-    result = {}
+    seen: set[str] = set()
+    result: dict[str, object] = {}
 
     for key, value in pairs:
         if key in seen:
@@ -18,7 +38,10 @@ def reject_duplicate_keys(pairs):
     return result
 
 
-def generated_json_matches_schema(text: str, schema) -> bool:
+def generated_json_matches_schema(
+    text: str,
+    schema: Schema,
+) -> bool:
     """Return whether generated text is valid JSON matching the schema."""
     try:
         value = json.loads(

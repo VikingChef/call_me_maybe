@@ -1,16 +1,16 @@
 class JSONState:
     """Track whether generated characters still form valid JSON syntax."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Create a fresh JSON parser state."""
-        self.stack = []
+        self.stack: list[tuple[str, str]] = []
         self.in_string = False
         self.escape_next = False
         self.complete = False
         self.invalid = False
         self.expecting = "value"
-        self.string_role = None
-        self.literal_target = None
+        self.string_role: str | None = None
+        self.literal_target: str | None = None
         self.literal_index = 0
         self.number_buffer = ""
 

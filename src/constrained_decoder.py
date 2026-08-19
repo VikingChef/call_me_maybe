@@ -4,13 +4,14 @@ from src.language_model import LanguageModel
 from src.token_filter import choose_best_valid_token
 from src.tokenizer import Tokenizer
 from src.errors import SchemaMismatchError, TokenLimitError
+from src.schema_state import Schema
 
 
 def generate_constrained_json(
     model: LanguageModel,
     tokenizer: Tokenizer,
     token_ids: list[int],
-    schema,
+    schema: Schema,
     max_new_tokens: int = 100,
 ) -> list[int]:
     """Generate schema-valid JSON by choosing one valid token at a time."""

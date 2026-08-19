@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 from src.models import (
     ArraySchema,
     BooleanSchema,
@@ -8,14 +10,31 @@ from src.models import (
 )
 
 
+Schema = (
+    StringSchema
+    | NumberSchema
+    | BooleanSchema
+    | NullSchema
+    | ArraySchema
+    | ObjectSchema
+)
+
+
+class SchemaFrame(TypedDict):
+    """Represent one container frame in the schema stack."""
+
+    schema: Schema
+    seen_keys: set[str] | None
+
+
 class SchemaState:
     """Track whether generated JSON still matches the required schema."""
 
-    def __init__(self, schema):
+    def __init__(self, schema: Schema) -> None:
         """Create schema state for constrained generation."""
         self.schema = schema
-        self.current_schema = schema
-        self.stack = []
+        self.current_schema: Schema = schema
+        self.stack: list[SchemaFrame] = []
         self.key_buffer = ""
         self.invalid = False
 
@@ -117,6 +136,8 @@ class SchemaState:
         if not isinstance(schema, ObjectSchema):
             return False
 
+        assert seen_keys is not None
+
         return any(
             property_name.startswith(prefix)
             and property_name not in seen_keys
@@ -158,6 +179,8 @@ class SchemaState:
             self.invalid = True
             return
 
+        assert seen_keys is not None
+
         if self.key_buffer not in schema.properties:
             self.invalid = True
             return
@@ -181,5 +204,7 @@ class SchemaState:
 
         if not isinstance(schema, ObjectSchema):
             return True
+
+        assert seen_keys is not None
 
         return set(schema.required).issubset(seen_keys)

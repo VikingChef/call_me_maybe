@@ -103,7 +103,7 @@ class FunctionDefinition(StrictModel):
 
     @field_validator("parameters", mode="before")
     @classmethod
-    def normalize_parameters(cls, value):
+    def normalize_parameters(cls, value: object) -> object:
         """Convert flat parameter definitions into an object schema."""
         if isinstance(value, ObjectSchema):
             return value
