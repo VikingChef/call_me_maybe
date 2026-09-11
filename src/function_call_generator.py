@@ -9,12 +9,59 @@ from src.errors import (
 from src.constrained_decoder import generate_constrained_json
 from src.function_selector import choose_function_name
 from src.language_model import LanguageModel
-from src.models import FunctionDefinition, PromptInput
+from src.models import (
+    ArraySchema,
+    FunctionDefinition,
+    IntegerSchema,
+    NumberSchema,
+    ObjectSchema,
+    PromptInput,
+)
 from src.prompt_builder import (
     build_model_prompt,
     build_parameter_prompt,
 )
 from src.tokenizer import Tokenizer
+
+
+def normalize_generated_value(
+    value: object,
+    schema: object,
+) -> object:
+    """Normalize generated values according to their parameter schema."""
+    if isinstance(schema, NumberSchema):
+        if isinstance(value, int) and not isinstance(value, bool):
+            return float(value)
+
+        return value
+
+    if isinstance(schema, IntegerSchema):
+        return value
+
+    if isinstance(schema, ArraySchema):
+        if not isinstance(value, list):
+            return value
+
+        return [
+            normalize_generated_value(item, schema.items)
+            for item in value
+        ]
+
+    if isinstance(schema, ObjectSchema):
+        if not isinstance(value, dict):
+            return value
+
+        return {
+            key: normalize_generated_value(
+                item,
+                schema.properties[key],
+            )
+            if key in schema.properties
+            else item
+            for key, item in value.items()
+        }
+
+    return value
 
 
 def generate_function_call(
@@ -60,6 +107,13 @@ def generate_function_call(
     parameter_token_ids = token_ids[parameter_start:]
     parameter_text = tokenizer.decode(parameter_token_ids)
     parameters = json.loads(parameter_text)
+    parameters = normalize_generated_value(
+        parameters,
+        selected_function.parameters,
+    )
+
+    if not isinstance(parameters, dict):
+        raise SchemaMismatchError("generated parameters are not an object")
 
     return selected_name, parameters
 
@@ -146,6 +200,13 @@ def generate_prompt_function_call(
     generated_parameter_ids = parameter_token_ids[parameter_start:]
     parameter_text = tokenizer.decode(generated_parameter_ids)
     parameters = json.loads(parameter_text)
+    parameters = normalize_generated_value(
+        parameters,
+        selected_function.parameters,
+    )
+
+    if not isinstance(parameters, dict):
+        raise SchemaMismatchError("generated parameters are not an object")
 
     return selected_name, parameters
 

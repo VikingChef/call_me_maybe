@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from src.models import (
     ArraySchema,
     BooleanSchema,
+    IntegerSchema,
     NullSchema,
     NumberSchema,
     ObjectSchema,
@@ -31,6 +32,16 @@ def test_numberschema() -> None:
 def test_numberschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
         NumberSchema(type="mimic")
+
+
+def test_integerschema() -> None:
+    schema = IntegerSchema(type="integer")
+    assert schema.type == "integer"
+
+
+def test_integerschema_rejects_invalid_type() -> None:
+    with pytest.raises(ValidationError):
+        IntegerSchema(type="number")
 
 
 def test_booleanschema() -> None:
@@ -276,3 +287,23 @@ def test_functiondefinition_accepts_source_parameter_format() -> None:
     assert function.parameters.properties["a"].type == "number"
     assert function.parameters.properties["b"].type == "number"
     assert function.parameters.required == ["a", "b"]
+
+def test_functiondefinition_accepts_integer_parameter() -> None:
+    function = FunctionDefinition.model_validate(
+        {
+            "name": "fn_is_even",
+            "description": "Check whether an integer is even.",
+            "parameters": {
+                "n": {
+                    "type": "integer",
+                },
+            },
+            "returns": {
+                "type": "boolean",
+            },
+        }
+    )
+
+    assert function.parameters.type == "object"
+    assert function.parameters.properties["n"].type == "integer"
+    assert function.parameters.required == ["n"]

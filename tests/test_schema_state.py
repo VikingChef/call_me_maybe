@@ -1,6 +1,7 @@
 from src.models import (
     ArraySchema,
     BooleanSchema,
+    IntegerSchema,
     NullSchema,
     NumberSchema,
     ObjectSchema,
@@ -17,6 +18,12 @@ def test_string_schema_start() -> None:
 
 def test_number_schema_start() -> None:
     state = SchemaState(NumberSchema(type="number"))
+
+    assert state.valid_value_starts() == set("-0123456789")
+
+
+def test_integer_schema_start() -> None:
+    state = SchemaState(IntegerSchema(type="integer"))
 
     assert state.valid_value_starts() == set("-0123456789")
 

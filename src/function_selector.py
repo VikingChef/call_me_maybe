@@ -54,7 +54,9 @@ def choose_function_name(
 
     while not state.complete:
         if generated_count >= max_new_tokens:
-            raise TokenLimitError("maximum function-name token limit reached")
+            raise TokenLimitError(
+                "maximum function-name token limit reached"
+            )
 
         scores = model.next_token_scores(token_ids)
 
@@ -77,7 +79,10 @@ def choose_function_name(
                 "no valid function-name tokens available"
             )
 
-        best_token = max(valid_tokens, key=lambda item: item[1])
+        best_token = max(
+            valid_tokens,
+            key=lambda item: item[1],
+        )
         token_id = best_token[0]
 
         token_ids.append(token_id)

@@ -6,6 +6,7 @@ from src.function_call_generator import (
 )
 from src.models import (
     FunctionDefinition,
+    IntegerSchema,
     NumberSchema,
     ObjectSchema,
     PromptInput,
@@ -65,7 +66,8 @@ def test_generate_function_call_selects_function_and_parameters() -> None:
         [function],
     )
 
-    assert result == ("get_age", {"age": 45})
+    assert result == ("get_age", {"age": 45.0})
+    assert isinstance(result[1]["age"], float)
 
 
 class RetryThenSucceedModel:
@@ -111,7 +113,8 @@ def test_retry_succeeds_after_first_failure() -> None:
         [function],
     )
 
-    assert result == ("get_age", {"age": 45})
+    assert result == ("get_age", {"age": 45.0})
+    assert isinstance(result[1]["age"], float)
 
 
 def test_repeated_failure_raises_final_error() -> None:
@@ -372,4 +375,34 @@ def test_generate_prompt_function_call_uses_separate_contexts(
         [function],
     )
 
+    assert result == ("get_age", {"age": 45.0})
+    assert isinstance(result[1]["age"], float)
+
+
+def test_generate_function_call_preserves_integer_parameter() -> None:
+    model = FakeModel()
+    tokenizer = FakeTokenizer()
+
+    function = FunctionDefinition(
+        name="get_age",
+        description="Return an age.",
+        parameters=ObjectSchema(
+            type="object",
+            properties={
+                "age": IntegerSchema(type="integer"),
+            },
+            required=["age"],
+        ),
+        returns=IntegerSchema(type="integer"),
+    )
+
+    result = generate_function_call(
+        model,
+        tokenizer,
+        [],
+        [function],
+    )
+
     assert result == ("get_age", {"age": 45})
+    assert isinstance(result[1]["age"], int)
+    assert not isinstance(result[1]["age"], bool)

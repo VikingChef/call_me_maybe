@@ -3,6 +3,7 @@ from typing import TypedDict
 from src.models import (
     ArraySchema,
     BooleanSchema,
+    IntegerSchema,
     NullSchema,
     NumberSchema,
     ObjectSchema,
@@ -13,6 +14,7 @@ from src.models import (
 Schema = (
     StringSchema
     | NumberSchema
+    | IntegerSchema
     | BooleanSchema
     | NullSchema
     | ArraySchema
@@ -46,6 +48,9 @@ class SchemaState:
             return {'"'}
 
         if isinstance(schema, NumberSchema):
+            return set("-0123456789")
+
+        if isinstance(schema, IntegerSchema):
             return set("-0123456789")
 
         if isinstance(schema, BooleanSchema):

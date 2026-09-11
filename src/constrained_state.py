@@ -1,4 +1,5 @@
 from src.json_state import JSONState
+from src.models import IntegerSchema
 from src.schema_state import Schema, SchemaState
 
 
@@ -65,6 +66,14 @@ class ConstrainedState:
             char == "}"
             and not was_in_string
             and not self.schema.required_keys_satisfied()
+        ):
+            self.invalid = True
+            return
+
+        if (
+            had_number
+            and isinstance(self.schema.current_schema, IntegerSchema)
+            and char in ".eE"
         ):
             self.invalid = True
             return

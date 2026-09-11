@@ -25,8 +25,8 @@ def build_model_prompt(
 
     return (
         "Choose the best function for the user's request.\n\n"
-        f"User request:\n{prompt.prompt}\n\n"
         f"Available functions:\n{function_text}\n\n"
+        f"User request:\n{prompt.prompt}\n\n"
         "Selected function:"
     )
 

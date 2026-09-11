@@ -1,6 +1,7 @@
 from src.models import (
     ArraySchema,
     BooleanSchema,
+    IntegerSchema,
     NullSchema,
     NumberSchema,
     ObjectSchema,
@@ -21,6 +22,14 @@ def test_number_schema() -> None:
 
     assert value_matches_schema(42, schema) is True
     assert value_matches_schema(3.14, schema) is True
+    assert value_matches_schema(True, schema) is False
+
+
+def test_integer_schema() -> None:
+    schema = IntegerSchema(type="integer")
+
+    assert value_matches_schema(42, schema) is True
+    assert value_matches_schema(3.14, schema) is False
     assert value_matches_schema(True, schema) is False
 
 

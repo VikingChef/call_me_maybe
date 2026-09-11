@@ -1,6 +1,7 @@
 from src.constrained_state import ConstrainedState
 from src.models import (
     ArraySchema,
+    IntegerSchema,
     NumberSchema,
     ObjectSchema,
     StringSchema,
@@ -111,6 +112,60 @@ def test_array_accepts_matching_item_types() -> None:
 
     assert state.invalid is False
     assert state.complete is True
+
+
+def test_constrained_state_accepts_integer_value() -> None:
+    schema = ObjectSchema(
+        type="object",
+        properties={
+            "age": IntegerSchema(type="integer"),
+        },
+        required=["age"],
+    )
+
+    state = ConstrainedState(schema)
+
+    for char in '{"age":45}':
+        state.feed(char)
+
+    assert state.invalid is False
+    assert state.complete is True
+
+
+def test_constrained_state_rejects_decimal_for_integer() -> None:
+    schema = ObjectSchema(
+        type="object",
+        properties={
+            "age": IntegerSchema(type="integer"),
+        },
+        required=["age"],
+    )
+
+    state = ConstrainedState(schema)
+
+    for char in '{"age":45.5}':
+        state.feed(char)
+
+    assert state.invalid is True
+    assert state.complete is False
+
+
+def test_constrained_state_rejects_exponent_for_integer() -> None:
+    schema = ObjectSchema(
+        type="object",
+        properties={
+            "age": IntegerSchema(type="integer"),
+        },
+        required=["age"],
+    )
+
+    state = ConstrainedState(schema)
+
+    for char in '{"age":45e2}':
+        state.feed(char)
+
+    assert state.invalid is True
+    assert state.complete is False
 
 
 def test_array_rejects_wrong_item_type() -> None:

@@ -3,6 +3,7 @@ import math
 from src.models import (
     ArraySchema,
     BooleanSchema,
+    IntegerSchema,
     NullSchema,
     NumberSchema,
     ObjectSchema,
@@ -15,6 +16,7 @@ def value_matches_schema(
     schema: (
         StringSchema
         | NumberSchema
+        | IntegerSchema
         | BooleanSchema
         | NullSchema
         | ArraySchema
@@ -36,6 +38,12 @@ def value_matches_schema(
             return math.isfinite(value)
 
         return False
+
+    if isinstance(schema, IntegerSchema):
+        if isinstance(value, bool):
+            return False
+
+        return isinstance(value, int)
 
     if isinstance(schema, BooleanSchema):
         return isinstance(value, bool)

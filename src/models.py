@@ -31,6 +31,12 @@ class NumberSchema(StrictModel):
     type: Literal["number"]
 
 
+class IntegerSchema(StrictModel):
+    """Represent a JSON integer schema."""
+
+    type: Literal["integer"]
+
+
 class BooleanSchema(StrictModel):
     """Represent a JSON boolean schema."""
 
@@ -50,12 +56,12 @@ class ArraySchema(StrictModel):
     items: (
         StringSchema
         | NumberSchema
+        | IntegerSchema
         | BooleanSchema
         | NullSchema
         | ArraySchema
         | ObjectSchema
     )
-
 
 class ObjectSchema(StrictModel):
     """Represent a JSON object schema with properties and required keys."""
@@ -65,6 +71,7 @@ class ObjectSchema(StrictModel):
         str,
         StringSchema
         | NumberSchema
+        | IntegerSchema
         | BooleanSchema
         | NullSchema
         | ArraySchema
@@ -95,6 +102,7 @@ class FunctionDefinition(StrictModel):
     returns: (
         StringSchema
         | NumberSchema
+        | IntegerSchema
         | BooleanSchema
         | NullSchema
         | ArraySchema
