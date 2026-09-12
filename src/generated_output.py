@@ -3,6 +3,7 @@ import json
 from src.models import (
     ArraySchema,
     BooleanSchema,
+    IntegerSchema,
     NullSchema,
     NumberSchema,
     ObjectSchema,
@@ -14,6 +15,7 @@ from src.schema_validator import value_matches_schema
 Schema = (
     StringSchema
     | NumberSchema
+    | IntegerSchema
     | BooleanSchema
     | NullSchema
     | ArraySchema

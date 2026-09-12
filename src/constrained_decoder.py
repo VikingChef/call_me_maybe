@@ -13,6 +13,7 @@ def generate_constrained_json(
     token_ids: list[int],
     schema: Schema,
     max_new_tokens: int = 100,
+    source_text: str | None = None,
 ) -> list[int]:
     """Generate schema-valid JSON by choosing one valid token at a time."""
     state = ConstrainedState(schema)
@@ -24,7 +25,15 @@ def generate_constrained_json(
             raise TokenLimitError("maximum token limit reached")
 
         scores = model.next_token_scores(token_ids)
-        token_id = choose_best_valid_token(state, tokenizer, scores)
+        generated_text = tokenizer.decode(generated_token_ids)
+
+        token_id = choose_best_valid_token(
+            state,
+            tokenizer,
+            scores,
+            source_text=source_text,
+            generated_text=generated_text,
+        )
 
         token_ids.append(token_id)
         generated_token_ids.append(token_id)

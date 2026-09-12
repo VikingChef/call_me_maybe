@@ -113,7 +113,9 @@ def test_valid_key_prefix_rejects_seen_key() -> None:
 
     state = SchemaState(schema)
     state.enter_object()
-    state.stack[-1]["seen_keys"].add("name")
+    seen_keys = state.stack[-1]["seen_keys"]
+    assert seen_keys is not None
+    seen_keys.add("name")
 
     assert state.valid_key_prefix("name") is False
     assert state.valid_key_prefix("age") is True
@@ -139,7 +141,9 @@ def test_finish_key_sets_property_schema() -> None:
 
     assert state.invalid is False
     assert isinstance(state.current_schema, NumberSchema)
-    assert "age" in state.stack[-1]["seen_keys"]
+    seen_keys = state.stack[-1]["seen_keys"]
+    assert seen_keys is not None
+    assert "age" in seen_keys
 
 
 def test_invalid_key_prefix_is_rejected() -> None:

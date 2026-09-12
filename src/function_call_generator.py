@@ -195,6 +195,7 @@ def generate_prompt_function_call(
         tokenizer,
         parameter_token_ids,
         selected_function.parameters,
+        source_text=prompt.prompt,
     )
 
     generated_parameter_ids = parameter_token_ids[parameter_start:]

@@ -54,7 +54,15 @@ class FakeTokenizer:
             2: "weather",
         }
 
-        return "".join(token_map[token_id] for token_id in token_ids)
+        return "".join(
+            token_map[token_id]
+            for token_id in token_ids
+        )
+
+    def encode(self, text: str) -> list[int]:
+        raise AssertionError(
+            "encode should not be called in this test"
+        )
 
 
 class FakeModel:

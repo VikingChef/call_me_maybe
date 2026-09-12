@@ -27,6 +27,9 @@ class FakeTokenizer:
 
         return "".join(token_map[token_id] for token_id in token_ids)
 
+    def encode(self, text: str) -> list[int]:
+        raise AssertionError("encode should not be called in this test")
+
 
 class FakeModel:
     def next_token_scores(self, token_ids: list[int]) -> list[float]:
@@ -358,9 +361,11 @@ def test_generate_prompt_function_call_uses_separate_contexts(
         tokenizer,
         token_ids,
         schema,
+        source_text=None,
     ):
         assert token_ids == [20]
         assert schema == function.parameters
+        assert source_text == "What age?"
         token_ids.append(99)
 
     monkeypatch.setattr(
@@ -369,7 +374,7 @@ def test_generate_prompt_function_call_uses_separate_contexts(
     )
 
     result = generate_prompt_function_call(
-        object(),
+        FakeModel(),
         PromptTokenizer(),
         prompt,
         [function],

@@ -21,7 +21,7 @@ def test_stringschema() -> None:
 
 def test_stringschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
-        StringSchema(type="banana")
+        StringSchema.model_validate({"type": "banana"})
 
 
 def test_numberschema() -> None:
@@ -31,7 +31,7 @@ def test_numberschema() -> None:
 
 def test_numberschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
-        NumberSchema(type="mimic")
+        NumberSchema.model_validate({"type": "mimic"})
 
 
 def test_integerschema() -> None:
@@ -41,7 +41,7 @@ def test_integerschema() -> None:
 
 def test_integerschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
-        IntegerSchema(type="number")
+        IntegerSchema.model_validate({"type": "number"})
 
 
 def test_booleanschema() -> None:
@@ -51,7 +51,7 @@ def test_booleanschema() -> None:
 
 def test_booleanschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
-        BooleanSchema(type="bagofholding")
+        BooleanSchema.model_validate({"type": "bagofholding"})
 
 
 def test_nullschema() -> None:
@@ -61,7 +61,7 @@ def test_nullschema() -> None:
 
 def test_nullschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
-        NullSchema(type="D20dice")
+        NullSchema.model_validate({"type": "D20dice"})
 
 
 def test_arrayschema_with_string_items() -> None:
@@ -75,25 +75,31 @@ def test_arrayschema_with_string_items() -> None:
 
 def test_arrayschema_rejects_invalid_type() -> None:
     with pytest.raises(ValidationError):
-        ArraySchema(
-            type="vestigeofdivergence",
-            items=StringSchema(type="string"),
+        ArraySchema.model_validate(
+            {
+                "type": "vestigeofdivergence",
+                "items": {"type": "string"},
+            }
         )
 
 
 def test_arrayschema_rejects_invalid_items() -> None:
     with pytest.raises(ValidationError):
-        ArraySchema(
-            type="array",
-            items="number",
+        ArraySchema.model_validate(
+            {
+                "type": "array",
+                "items": "number",
+            }
         )
 
 
 def test_stringschema_rejects_extra_field() -> None:
     with pytest.raises(ValidationError):
-        StringSchema(
-            type="string",
-            dragon="red",
+        StringSchema.model_validate(
+            {
+                "type": "string",
+                "dragon": "red",
+            }
         )
 
 
