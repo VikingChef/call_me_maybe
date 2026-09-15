@@ -1,3 +1,5 @@
+"""Tests for combined JSON-syntax and schema-constrained state."""
+
 from src.constrained_state import ConstrainedState
 from src.models import (
     ArraySchema,
@@ -9,6 +11,7 @@ from src.models import (
 
 
 def test_constrained_state_accepts_matching_object() -> None:
+    """Accept an object whose value matches the required schema."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -27,6 +30,7 @@ def test_constrained_state_accepts_matching_object() -> None:
 
 
 def test_constrained_state_rejects_wrong_value_type() -> None:
+    """Reject an object value with the wrong schema type."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -45,6 +49,7 @@ def test_constrained_state_rejects_wrong_value_type() -> None:
 
 
 def test_constrained_state_rejects_unknown_key() -> None:
+    """Reject object keys that are not defined by the schema."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -63,6 +68,7 @@ def test_constrained_state_rejects_unknown_key() -> None:
 
 
 def test_constrained_state_rejects_missing_required_key() -> None:
+    """Reject an object closed before all required keys are generated."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -82,6 +88,7 @@ def test_constrained_state_rejects_missing_required_key() -> None:
 
 
 def test_brace_inside_string_does_not_close_container() -> None:
+    """Treat braces inside strings as text rather than container syntax."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -100,6 +107,7 @@ def test_brace_inside_string_does_not_close_container() -> None:
 
 
 def test_array_accepts_matching_item_types() -> None:
+    """Accept array items that match the configured item schema."""
     schema = ArraySchema(
         type="array",
         items=NumberSchema(type="number"),
@@ -115,6 +123,7 @@ def test_array_accepts_matching_item_types() -> None:
 
 
 def test_constrained_state_accepts_integer_value() -> None:
+    """Accept whole-number values for integer schemas."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -133,6 +142,7 @@ def test_constrained_state_accepts_integer_value() -> None:
 
 
 def test_constrained_state_rejects_decimal_for_integer() -> None:
+    """Reject decimal notation when an integer value is required."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -151,6 +161,7 @@ def test_constrained_state_rejects_decimal_for_integer() -> None:
 
 
 def test_constrained_state_rejects_exponent_for_integer() -> None:
+    """Reject exponent notation when an integer value is required."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -169,6 +180,7 @@ def test_constrained_state_rejects_exponent_for_integer() -> None:
 
 
 def test_array_rejects_wrong_item_type() -> None:
+    """Reject array items that violate the configured item schema."""
     schema = ArraySchema(
         type="array",
         items=NumberSchema(type="number"),
@@ -184,6 +196,7 @@ def test_array_rejects_wrong_item_type() -> None:
 
 
 def test_nested_object_accepts_matching_schema() -> None:
+    """Accept nested objects whose values match the nested schema."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -208,6 +221,7 @@ def test_nested_object_accepts_matching_schema() -> None:
 
 
 def test_nested_object_rejects_wrong_nested_type() -> None:
+    """Reject nested values that violate the nested property schema."""
     schema = ObjectSchema(
         type="object",
         properties={

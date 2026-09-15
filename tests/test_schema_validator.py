@@ -1,3 +1,5 @@
+"""Tests for validating Python values against JSON-schema models."""
+
 from src.models import (
     ArraySchema,
     BooleanSchema,
@@ -11,6 +13,7 @@ from src.schema_validator import value_matches_schema
 
 
 def test_string_schema() -> None:
+    """Accept strings and reject non-string values."""
     schema = StringSchema(type="string")
 
     assert value_matches_schema("hello", schema) is True
@@ -18,6 +21,7 @@ def test_string_schema() -> None:
 
 
 def test_number_schema() -> None:
+    """Accept integers and floats while rejecting booleans as numbers."""
     schema = NumberSchema(type="number")
 
     assert value_matches_schema(42, schema) is True
@@ -26,6 +30,7 @@ def test_number_schema() -> None:
 
 
 def test_integer_schema() -> None:
+    """Accept integers while rejecting floats and booleans."""
     schema = IntegerSchema(type="integer")
 
     assert value_matches_schema(42, schema) is True
@@ -34,6 +39,7 @@ def test_integer_schema() -> None:
 
 
 def test_boolean_schema() -> None:
+    """Accept booleans and reject integer values."""
     schema = BooleanSchema(type="boolean")
 
     assert value_matches_schema(True, schema) is True
@@ -41,6 +47,7 @@ def test_boolean_schema() -> None:
 
 
 def test_null_schema() -> None:
+    """Accept None and reject the string form of null."""
     schema = NullSchema(type="null")
 
     assert value_matches_schema(None, schema) is True
@@ -48,6 +55,7 @@ def test_null_schema() -> None:
 
 
 def test_array_schema() -> None:
+    """Validate every item in an array against its item schema."""
     schema = ArraySchema(
         type="array",
         items=NumberSchema(type="number"),
@@ -58,6 +66,7 @@ def test_array_schema() -> None:
 
 
 def test_object_schema() -> None:
+    """Validate required keys, value types, and unknown properties."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -84,6 +93,7 @@ def test_object_schema() -> None:
 
 
 def test_nested_schema() -> None:
+    """Validate nested arrays and their item schemas recursively."""
     schema = ObjectSchema(
         type="object",
         properties={

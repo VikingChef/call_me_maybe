@@ -1,3 +1,5 @@
+"""Generate schema-valid function calls from model output."""
+
 import json
 
 from src.errors import (
@@ -16,6 +18,7 @@ from src.models import (
     NumberSchema,
     ObjectSchema,
     PromptInput,
+    StringSchema,
 )
 from src.prompt_builder import (
     build_model_prompt,
@@ -64,13 +67,42 @@ def normalize_generated_value(
     return value
 
 
+def preserve_explicit_string_parameter(
+    prompt: PromptInput,
+    function: FunctionDefinition,
+    parameters: dict,
+) -> dict:
+    """Preserve a single explicit string value supplied after a colon."""
+    properties = function.parameters.properties
+
+    if len(properties) != 1:
+        return parameters
+
+    parameter_name, schema = next(iter(properties.items()))
+
+    if not isinstance(schema, StringSchema):
+        return parameters
+
+    if ":" not in prompt.prompt:
+        return parameters
+
+    value = prompt.prompt.split(":", 1)[1].strip()
+
+    if value == "":
+        return parameters
+
+    parameters[parameter_name] = value
+
+    return parameters
+
+
 def generate_function_call(
     model: LanguageModel,
     tokenizer: Tokenizer,
     token_ids: list[int],
     functions: list[FunctionDefinition],
 ) -> tuple[str, dict]:
-    """Generate a function name and schema-valid parameters from token IDs."""
+    """Generate a function name and schema-valid parameter object."""
     if not functions:
         raise ValueError("at least one function definition is required")
 
@@ -125,7 +157,7 @@ def generate_function_call_with_retries(
     functions: list[FunctionDefinition],
     max_attempts: int = 3,
 ) -> tuple[str, dict]:
-    """Retry function-call generation after recoverable generation errors."""
+    """Retry token-based generation after recoverable generation errors."""
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
 
@@ -161,7 +193,7 @@ def generate_prompt_function_call(
     prompt: PromptInput,
     functions: list[FunctionDefinition],
 ) -> tuple[str, dict]:
-    """Generate a function call in separate selection and parameter stages."""
+    """Select a function, then generate its schema-valid parameters."""
     selection_prompt = build_model_prompt(
         prompt,
         functions,
@@ -195,7 +227,6 @@ def generate_prompt_function_call(
         tokenizer,
         parameter_token_ids,
         selected_function.parameters,
-        source_text=prompt.prompt,
     )
 
     generated_parameter_ids = parameter_token_ids[parameter_start:]
@@ -208,6 +239,12 @@ def generate_prompt_function_call(
 
     if not isinstance(parameters, dict):
         raise SchemaMismatchError("generated parameters are not an object")
+
+    parameters = preserve_explicit_string_parameter(
+        prompt,
+        selected_function,
+        parameters,
+    )
 
     return selected_name, parameters
 

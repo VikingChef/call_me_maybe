@@ -1,3 +1,5 @@
+"""Protocol describing the language-model interface used by the project."""
+
 from typing import Protocol
 
 

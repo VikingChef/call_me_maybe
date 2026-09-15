@@ -1,3 +1,6 @@
+"""Custom exception hierarchy for the Call Me Maybe application."""
+
+
 class CallMeMaybeError(Exception):
     """Base exception for errors raised by Call Me Maybe."""
 

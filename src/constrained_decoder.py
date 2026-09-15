@@ -1,3 +1,5 @@
+"""Generate JSON under schema constraints one token at a time."""
+
 from src.generated_output import generated_json_matches_schema
 from src.constrained_state import ConstrainedState
 from src.language_model import LanguageModel
@@ -13,9 +15,8 @@ def generate_constrained_json(
     token_ids: list[int],
     schema: Schema,
     max_new_tokens: int = 100,
-    source_text: str | None = None,
 ) -> list[int]:
-    """Generate schema-valid JSON by choosing one valid token at a time."""
+    """Generate JSON by selecting only tokens valid for the given schema."""
     state = ConstrainedState(schema)
     generated_token_ids = []
     generated_count = 0
@@ -25,15 +26,7 @@ def generate_constrained_json(
             raise TokenLimitError("maximum token limit reached")
 
         scores = model.next_token_scores(token_ids)
-        generated_text = tokenizer.decode(generated_token_ids)
-
-        token_id = choose_best_valid_token(
-            state,
-            tokenizer,
-            scores,
-            source_text=source_text,
-            generated_text=generated_text,
-        )
+        token_id = choose_best_valid_token(state, tokenizer, scores)
 
         token_ids.append(token_id)
         generated_token_ids.append(token_id)
@@ -45,7 +38,10 @@ def generate_constrained_json(
 
     generated_text = tokenizer.decode(generated_token_ids)
 
-    if not generated_json_matches_schema(generated_text, schema):
+    if not generated_json_matches_schema(
+        generated_text,
+        schema,  # type: ignore[arg-type]
+    ):
         raise SchemaMismatchError("generated JSON does not match schema")
 
     return token_ids

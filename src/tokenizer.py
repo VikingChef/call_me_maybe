@@ -1,3 +1,5 @@
+"""Protocol describing the tokenizer interface used by the project."""
+
 from typing import Protocol
 
 

@@ -1,3 +1,6 @@
+"""Track incremental JSON syntax during constrained generation."""
+
+
 class JSONState:
     """Track whether generated characters still form valid JSON syntax."""
 
@@ -15,9 +18,7 @@ class JSONState:
         self.number_buffer = ""
 
     def number_status(self, text: str) -> tuple[bool, bool]:
-        """Return whether text is a valid JSON number prefix
-        and a complete number.
-        """
+        """Return whether text is a valid number prefix and complete number."""
         index = 0
         length = len(text)
 

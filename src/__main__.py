@@ -1,3 +1,5 @@
+"""Command-line entry point for the Call Me Maybe application."""
+
 import argparse
 import json
 from pathlib import Path
@@ -6,9 +8,7 @@ from src.input_loader import (
     load_function_definitions,
     load_prompt_inputs,
 )
-
 from src.llm_sdk_adapter import LLMSDKAdapter
-
 from src.function_call_generator import generate_prompt_function_call
 from src.language_model import LanguageModel
 from src.errors import CallMeMaybeError
@@ -17,7 +17,7 @@ from src.tokenizer import Tokenizer
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments for input and output file paths."""
+    """Parse paths for function definitions, prompts, and generated output."""
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -32,13 +32,14 @@ def parse_args() -> argparse.Namespace:
         "--output",
         default="data/output/function_calling_results.json",
     )
+
     return parser.parse_args()
 
 
 def load_inputs(
     args: argparse.Namespace,
 ) -> tuple[list[FunctionDefinition], list[PromptInput]]:
-    """Load and validate function definitions and prompt inputs."""
+    """Load and validate the function definitions and user prompts."""
     functions = load_function_definitions(
         args.functions_definition
     )
@@ -53,7 +54,7 @@ def generate_result(
     prompt: PromptInput,
     functions: list[FunctionDefinition],
 ) -> dict[str, object]:
-    """Generate one output result for a prompt."""
+    """Generate one schema-valid function-call result for a prompt."""
     name, parameters = generate_prompt_function_call(
         model,
         tokenizer,
@@ -74,7 +75,7 @@ def generate_results(
     prompts: list[PromptInput],
     functions: list[FunctionDefinition],
 ) -> list[dict[str, object]]:
-    """Generate output results for all prompts."""
+    """Generate a function-call result for every validated prompt."""
     return [
         generate_result(
             model,
@@ -90,7 +91,7 @@ def write_results(
     output_path: str | Path,
     results: list[dict[str, object]],
 ) -> None:
-    """Write generated results to the requested JSON output file."""
+    """Create the output directory and write results as formatted JSON."""
     output_path = Path(output_path)
 
     output_path.parent.mkdir(
@@ -107,7 +108,7 @@ def write_results(
 
 
 def main() -> None:
-    """Run the Call Me Maybe command-line application."""
+    """Run the complete Call Me Maybe command-line pipeline."""
     try:
         args = parse_args()
 

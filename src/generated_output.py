@@ -1,3 +1,5 @@
+"""Validate completed model output against its required JSON schema."""
+
 import json
 
 from src.models import (

@@ -1,3 +1,5 @@
+"""Tests for function-call generation, retries, and parameter handling."""
+
 from src.errors import FunctionSelectionError
 from src.function_call_generator import (
     generate_function_call,
@@ -14,7 +16,14 @@ from src.models import (
 
 
 class FakeTokenizer:
+    """Minimal tokenizer for deterministic function-call generation tests."""
+
+    def encode(self, text: str) -> list[int]:
+        """Satisfy the tokenizer protocol for tests that only decode."""
+        return []
+
     def decode(self, token_ids: list[int]) -> str:
+        """Decode predefined IDs into function names or JSON fragments."""
         token_map = {
             0: "banana",
             1: "get_age",
@@ -27,12 +36,12 @@ class FakeTokenizer:
 
         return "".join(token_map[token_id] for token_id in token_ids)
 
-    def encode(self, text: str) -> list[int]:
-        raise AssertionError("encode should not be called in this test")
-
 
 class FakeModel:
+    """Return deterministic token scores for successful generation tests."""
+
     def next_token_scores(self, token_ids: list[int]) -> list[float]:
+        """Return scores that produce ``get_age`` and ``{"age":45}``."""
         score_sets = {
             0: [10.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             1: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0],
@@ -46,6 +55,7 @@ class FakeModel:
 
 
 def test_generate_function_call_selects_function_and_parameters() -> None:
+    """Generate the expected function name and normalized parameters."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
 
@@ -74,11 +84,15 @@ def test_generate_function_call_selects_function_and_parameters() -> None:
 
 
 class RetryThenSucceedModel:
-    def __init__(self):
+    """Fail the first generation attempt and succeed on the next."""
+
+    def __init__(self) -> None:
+        """Initialize retry tracking and the successful fallback model."""
         self.call_count = 0
         self.success_model = FakeModel()
 
     def next_token_scores(self, token_ids: list[int]) -> list[float]:
+        """Return an invalid first result and valid scores afterward."""
         self.call_count += 1
 
         if self.call_count == 1:
@@ -88,11 +102,15 @@ class RetryThenSucceedModel:
 
 
 class AlwaysFailModel:
+    """Return scores that cannot produce a valid function name."""
+
     def next_token_scores(self, token_ids: list[int]) -> list[float]:
+        """Return the same unusable score set for every request."""
         return [10.0]
 
 
 def test_retry_succeeds_after_first_failure() -> None:
+    """Retry a recoverable failure and return the successful result."""
     model = RetryThenSucceedModel()
     tokenizer = FakeTokenizer()
 
@@ -121,6 +139,7 @@ def test_retry_succeeds_after_first_failure() -> None:
 
 
 def test_repeated_failure_raises_final_error() -> None:
+    """Raise the final recoverable error after all retries fail."""
     model = AlwaysFailModel()
     tokenizer = FakeTokenizer()
 
@@ -151,9 +170,10 @@ def test_repeated_failure_raises_final_error() -> None:
 
 
 def test_retry_does_not_change_original_token_ids() -> None:
+    """Keep the caller's token list unchanged across retry attempts."""
     model = RetryThenSucceedModel()
     tokenizer = FakeTokenizer()
-    token_ids = []
+    token_ids: list[int] = []
 
     function = FunctionDefinition(
         name="get_age",
@@ -179,6 +199,7 @@ def test_retry_does_not_change_original_token_ids() -> None:
 
 
 def test_retry_rejects_invalid_max_attempts() -> None:
+    """Reject retry counts below one."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
 
@@ -210,6 +231,7 @@ def test_retry_rejects_invalid_max_attempts() -> None:
 
 
 def test_generate_function_call_rejects_empty_function_list() -> None:
+    """Reject generation when no function definitions are available."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
 
@@ -227,6 +249,7 @@ def test_generate_function_call_rejects_empty_function_list() -> None:
 
 
 def test_generate_function_call_rejects_duplicate_function_names() -> None:
+    """Reject ambiguous function definitions with duplicate names."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
 
@@ -270,6 +293,7 @@ def test_generate_function_call_rejects_duplicate_function_names() -> None:
 
 
 def test_generate_function_call_rejects_empty_function_name() -> None:
+    """Reject function definitions whose name is empty."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
 
@@ -302,8 +326,13 @@ def test_generate_function_call_rejects_empty_function_name() -> None:
 def test_generate_prompt_function_call_uses_separate_contexts(
     monkeypatch,
 ) -> None:
+    """Use separate prompts for function selection and parameter generation."""
+
     class PromptTokenizer:
+        """Tokenizer that distinguishes selection and parameter prompts."""
+
         def encode(self, text: str) -> list[int]:
+            """Encode each stage into a distinct test token."""
             if text == "SELECTION":
                 return [10]
 
@@ -313,6 +342,7 @@ def test_generate_prompt_function_call_uses_separate_contexts(
             raise AssertionError(f"unexpected prompt: {text}")
 
         def decode(self, token_ids: list[int]) -> str:
+            """Decode the generated parameter token into JSON."""
             if token_ids == [99]:
                 return '{"age":45}'
 
@@ -347,6 +377,7 @@ def test_generate_prompt_function_call_uses_separate_contexts(
         token_ids,
         function_names,
     ):
+        """Verify the selection stage receives only selection tokens."""
         assert token_ids == [10]
         assert function_names == ["get_age"]
         return "get_age"
@@ -361,11 +392,10 @@ def test_generate_prompt_function_call_uses_separate_contexts(
         tokenizer,
         token_ids,
         schema,
-        source_text=None,
     ):
+        """Verify the parameter stage receives only parameter tokens."""
         assert token_ids == [20]
         assert schema == function.parameters
-        assert source_text == "What age?"
         token_ids.append(99)
 
     monkeypatch.setattr(
@@ -385,6 +415,7 @@ def test_generate_prompt_function_call_uses_separate_contexts(
 
 
 def test_generate_function_call_preserves_integer_parameter() -> None:
+    """Keep integer-schema parameters as integers rather than floats."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
 

@@ -1,3 +1,5 @@
+"""Validate Python values against the supported JSON-schema models."""
+
 import math
 
 from src.models import (

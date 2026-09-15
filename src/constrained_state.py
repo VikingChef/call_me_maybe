@@ -1,24 +1,26 @@
+"""Coordinate JSON syntax and schema state during constrained generation."""
+
 from src.json_state import JSONState
 from src.models import IntegerSchema
 from src.schema_state import Schema, SchemaState
 
 
 class ConstrainedState:
-    """Combine JSON syntax state with schema validation state."""
+    """Combine JSON syntax state with schema-validation state."""
 
     def __init__(self, schema: Schema) -> None:
-        """Create JSON and schema states for constrained generation."""
+        """Initialize JSON and schema state for constrained generation."""
         self.json = JSONState()
         self.schema = SchemaState(schema)
         self.invalid = False
 
     @property
     def complete(self) -> bool:
-        """Return whether the JSON state has reached a complete value."""
+        """Return whether generation has produced a complete JSON value."""
         return self.json.complete
 
     def feed(self, char: str) -> None:
-        """Feed one character into both JSON and schema validation states."""
+        """Feed one character through JSON and schema validation."""
         if self.invalid:
             return
 

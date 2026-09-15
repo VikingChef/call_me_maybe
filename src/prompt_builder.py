@@ -1,3 +1,5 @@
+"""Build the prompts used for function selection and parameter generation."""
+
 import json
 
 from src.models import FunctionDefinition, PromptInput
@@ -36,26 +38,21 @@ def build_parameter_prompt(
     function: FunctionDefinition,
 ) -> str:
     """Build the Stage 2 prompt used to generate function parameters."""
-    function_context = {
-        "name": function.name,
-        "description": function.description,
-        "parameters": {
-            name: {
-                "type": schema.type,
-            }
-            for name, schema in function.parameters.properties.items()
+    context = {
+        "user_request": prompt.prompt,
+        "selected_function": {
+            "name": function.name,
+            "description": function.description,
+            "parameters": {
+                name: {
+                    "type": schema.type,
+                }
+                for name, schema in function.parameters.properties.items()
+            },
         },
     }
 
     return (
-        "Selected function:\n"
-        f"{json.dumps(function_context, indent=2)}\n\n"
-        "User request as JSON string:\n"
-        f"{json.dumps(prompt.prompt)}\n\n"
-        "Extract only the parameter values requested by the user. "
-        "Do not include the operation or command prefix. "
-        "Preserve the exact characters of values from the user request, "
-        "including leading slashes, backslashes, quotes, braces, spaces, "
-        "and punctuation.\n\n"
+        f"{json.dumps(context, indent=2)}\n\n"
         "Parameter values:"
     )

@@ -1,3 +1,5 @@
+"""Tests for constrained token filtering."""
+
 from src.constrained_state import ConstrainedState
 from src.errors import NoValidTokenError
 from src.models import ObjectSchema, StringSchema
@@ -10,6 +12,7 @@ from src.token_filter import (
 
 
 def make_name_state() -> ConstrainedState:
+    """Create a decoder state expecting a string value for ``name``."""
     schema = ObjectSchema(
         type="object",
         properties={
@@ -27,18 +30,21 @@ def make_name_state() -> ConstrainedState:
 
 
 def test_valid_continuation_is_allowed() -> None:
+    """Allow text that keeps the generated JSON valid."""
     state = make_name_state()
 
     assert is_valid_continuation(state, '"Rasmus"') is True
 
 
 def test_invalid_continuation_is_rejected() -> None:
+    """Reject text that cannot legally continue the current JSON state."""
     state = make_name_state()
 
-    assert is_valid_continuation(state, "}") is False
+    assert is_valid_continuation(state, '}') is False
 
 
 def test_candidate_does_not_change_original_state() -> None:
+    """Check candidate text without mutating the original decoder state."""
     state = make_name_state()
 
     is_valid_continuation(state, '"Rasmus"')
@@ -49,45 +55,22 @@ def test_candidate_does_not_change_original_state() -> None:
 
 
 class FakeTokenizer:
+    """Minimal tokenizer used by token-filter tests."""
+
+    def encode(self, text: str) -> list[int]:
+        """Satisfy the tokenizer protocol for tests that only decode."""
+        return []
+
     def decode(self, token_ids: list[int]) -> str:
+        """Decode predefined token IDs into candidate text."""
         if token_ids == [1]:
             return '"Rasmus"'
 
         return "}"
 
-    def encode(self, text: str) -> list[int]:
-        raise AssertionError("encode should not be called in this test")
-
-
-class CopyBiasTokenizer:
-    def decode(self, token_ids: list[int]) -> str:
-        if token_ids == [1]:
-            return " hello"
-
-        if token_ids == [2]:
-            return ' \\"'
-
-        return "}"
-
-    def encode(self, text: str) -> list[int]:
-        raise AssertionError("encode should not be called in this test")
-
-
-class PlainCopyTokenizer:
-    def decode(self, token_ids: list[int]) -> str:
-        if token_ids == [1]:
-            return " world"
-
-        if token_ids == [2]:
-            return " there"
-
-        return "}"
-
-    def encode(self, text: str) -> list[int]:
-        raise AssertionError("encode should not be called in this test")
-
 
 def test_valid_token_is_allowed() -> None:
+    """Allow a token whose decoded text is a valid continuation."""
     state = make_name_state()
     tokenizer = FakeTokenizer()
 
@@ -95,6 +78,7 @@ def test_valid_token_is_allowed() -> None:
 
 
 def test_invalid_token_is_rejected() -> None:
+    """Reject a token whose decoded text violates the current state."""
     state = make_name_state()
     tokenizer = FakeTokenizer()
 
@@ -102,6 +86,7 @@ def test_invalid_token_is_rejected() -> None:
 
 
 def test_filter_valid_tokens_keeps_only_legal_tokens() -> None:
+    """Return only tokens that can legally continue generation."""
     state = make_name_state()
     tokenizer = FakeTokenizer()
     scores = [0.1, 2.5, 1.7]
@@ -112,6 +97,7 @@ def test_filter_valid_tokens_keeps_only_legal_tokens() -> None:
 
 
 def test_choose_best_valid_token_returns_highest_score() -> None:
+    """Choose the highest-scoring token among valid candidates."""
     state = make_name_state()
     tokenizer = FakeTokenizer()
     scores = [0.1, 2.5, 1.7]
@@ -122,6 +108,7 @@ def test_choose_best_valid_token_returns_highest_score() -> None:
 
 
 def test_choose_best_valid_token_raises_when_none_are_valid() -> None:
+    """Raise when no token can legally continue generation."""
     state = make_name_state()
 
     for char in '"Rasmus"}':
@@ -136,59 +123,3 @@ def test_choose_best_valid_token_raises_when_none_are_valid() -> None:
         assert str(error) == "no valid tokens available"
     else:
         assert False
-
-
-def test_escape_bias_prefers_escaped_source_character() -> None:
-    schema = ObjectSchema(
-        type="object",
-        properties={
-            "text": StringSchema(type="string"),
-        },
-        required=["text"],
-    )
-
-    state = ConstrainedState(schema)
-
-    for char in '{"text": "Say':
-        state.feed(char)
-
-    tokenizer = CopyBiasTokenizer()
-    scores = [0.0, 10.0, 5.0]
-
-    result = choose_best_valid_token(
-        state,
-        tokenizer,
-        scores,
-        source_text='Say "hello" to {name}',
-        generated_text='{"text": "Say',
-    )
-
-    assert result == 2
-
-
-def test_escape_bias_does_not_override_plain_text() -> None:
-    schema = ObjectSchema(
-        type="object",
-        properties={
-            "text": StringSchema(type="string"),
-        },
-        required=["text"],
-    )
-
-    state = ConstrainedState(schema)
-
-    for char in '{"text": "Hello':
-        state.feed(char)
-
-    tokenizer = PlainCopyTokenizer()
-    scores = [0.0, 10.0, 5.0]
-
-    result = choose_best_valid_token(
-        state,
-        tokenizer,
-        scores,
-        source_text="Hello there",
-        generated_text='{"text": "Hello',
-    )
-
-    assert result == 1

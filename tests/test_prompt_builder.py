@@ -1,3 +1,5 @@
+"""Tests for prompt construction used by both generation stages."""
+
 from src.models import (
     FunctionDefinition,
     ObjectSchema,
@@ -11,6 +13,7 @@ from src.prompt_builder import (
 
 
 def test_build_model_prompt_includes_request_and_function_data() -> None:
+    """Include the request and available function metadata in Stage 1."""
     prompt = PromptInput(
         prompt="What is the weather in Berlin?"
     )
@@ -41,6 +44,7 @@ def test_build_model_prompt_includes_request_and_function_data() -> None:
 
 
 def test_build_parameter_prompt_uses_only_selected_function() -> None:
+    """Build Stage 2 context from only the selected function."""
     prompt = PromptInput(
         prompt="Greet shrek"
     )

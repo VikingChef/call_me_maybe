@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by rrasmuss.*
+**This project has been created as part of the 42 curriculum by rrasmuss.**
 
 # Call Me Maybe
 
@@ -16,48 +16,70 @@ Each result contains exactly:
 
 The project uses the supplied `llm_sdk` interface. Project source code does not directly import PyTorch, Hugging Face, or Transformers.
 
+The main idea is simple enough to describe, although considerably less simple to actually make behave:
+
+**let the model make the semantic decisions, but only allow it to generate structurally valid answers.**
+
 ## Instructions
 
 Install dependencies:
 
-    uv sync
+```bash
+uv sync
+```
 
 or:
 
-    make install
+```bash
+make install
+```
 
 Run with the default input/output paths:
 
-    uv run python -m src
+```bash
+uv run python -m src
+```
 
 or:
 
-    make run
+```bash
+make run
+```
 
 Default paths:
 
-    data/input/functions_definition.json
-    data/input/function_calling_tests.json
-    data/output/function_calling_results.json
+```text
+data/input/functions_definition.json
+data/input/function_calling_tests.json
+data/output/function_calling_results.json
+```
 
 Custom paths:
 
-    uv run python -m src \
-        --functions_definition path/to/functions.json \
-        --input path/to/prompts.json \
-        --output path/to/results.json
+```bash
+uv run python -m src \
+    --functions_definition path/to/functions.json \
+    --input path/to/prompts.json \
+    --output path/to/results.json
+```
 
 Run tests:
 
-    uv run python -m pytest
+```bash
+uv run python -m pytest
+```
 
 Run linting and static type checks:
 
-    make lint
+```bash
+make lint
+```
 
 Clean generated caches:
 
-    make clean
+```bash
+make clean
+```
 
 ## Algorithm
 
@@ -76,9 +98,15 @@ The model produces next-token scores.
 
 Instead of allowing arbitrary text, the selector only accepts token continuations that can still form one of the available function names.
 
-Among those legal continuations, the highest-scoring model token is chosen.
+At each step:
 
-Generation stops when a complete valid function name has been produced.
+1. the model scores the possible next tokens
+2. candidates are considered from highest score downward
+3. invalid continuations are rejected
+4. the highest-scoring valid continuation is selected
+5. generation continues until a complete function name is reached
+
+This means the model still chooses the function, but it cannot suddenly decide that the best available function is `"here_is_a_small_poem"`.
 
 ### Stage 2: parameter generation
 
@@ -94,17 +122,37 @@ The parameter object is generated token by token.
 Every candidate must remain valid according to both:
 
 1. JSON syntax
-2. the selected function's schema
+2. the selected function's parameter schema
 
-`JSONState` tracks JSON syntax.
+`JSONState` tracks the current JSON syntax state.
 
-`SchemaState` tracks schema validity.
+`SchemaState` tracks what is allowed by the selected schema.
 
 `ConstrainedState` combines the two.
 
-The model still decides what to generate; the constraints merely stop it from wandering off into syntactic chaos.
+The basic generation loop is:
 
-After generation finishes, the completed JSON is parsed and validated once more as a final safety check.
+**model scores → reject invalid tokens → choose the best valid token → update state → continue**
+
+The model still decides what to generate. The constraints only prevent it from producing output that cannot satisfy the required structure.
+
+After generation finishes, the completed text is parsed as JSON and checked against the required schema again as a final safety check.
+
+### Explicit string preservation
+
+There is one deliberately narrow post-generation rule for prompts that contain exactly one string parameter and provide its value explicitly after a colon.
+
+For example:
+
+```text
+Format template: Say "hello" to {name}
+```
+
+In that case the explicit value after the colon is preserved exactly.
+
+This prevents a small model from helpfully "improving" a literal string that the user actually wanted unchanged.
+
+The rule is intentionally narrow rather than a general attempt to rewrite model output in Python.
 
 ## Design decisions
 
@@ -112,135 +160,235 @@ After generation finishes, the completed JSON is parsed and validated once more 
 
 Function selection and parameter generation use separate model contexts.
 
-This keeps each task focused and proved more reliable than asking the model to solve both at once.
+Stage 1 answers:
+
+> Which function should be called?
+
+Stage 2 answers:
+
+> What arguments should that function receive?
+
+Keeping those tasks separate proved much more reliable than asking a small model to solve both at once.
+
+It also makes failures easier to reason about, which became increasingly valuable somewhere around the point where I had stared at token streams for long enough to develop opinions about individual braces.
 
 ### Constrained decoding
 
 The project does not generate arbitrary text and repair it afterward.
 
-Constraints are applied while tokens are being generated.
+Constraints are applied **while tokens are being generated**.
 
-Model scores are preserved, and the highest-scoring valid token is selected at every step.
+The model's scores are preserved, and the highest-scoring token that remains legal is selected at every step.
 
-This keeps semantic choices with the model while enforcing structural correctness.
+That distinction is important: the Python code enforces structure, but it does not replace the model's semantic decision-making.
 
 ### Separate JSON and schema state
 
 JSON syntax and schema validation are handled separately.
 
-`JSONState` manages strings, numbers, literals, arrays, objects, commas, colons, escaping, and nesting.
+`JSONState` manages:
 
-`SchemaState` manages allowed value types, valid property names, required keys, duplicate keys, arrays, and nested schemas.
+- strings
+- escaping
+- numbers
+- booleans and null
+- arrays
+- objects
+- commas and colons
+- nesting
 
-Keeping them separate made the state machine much easier to reason about and considerably less likely to become a small haunted forest.
+`SchemaState` manages:
+
+- allowed value types
+- valid property names
+- required keys
+- duplicate keys
+- array item schemas
+- nested objects and arrays
+
+`ConstrainedState` feeds generated characters through both.
+
+Keeping the responsibilities separate made the state machine much easier to reason about and considerably less likely to become a small haunted forest.
 
 ### Strict input validation
 
-Pydantic models validate prompt input and function definitions before generation starts.
+Pydantic models validate prompt input and function definitions before generation begins.
 
-Extra fields are rejected and types are strict.
+Validation is strict, and unexpected fields are rejected.
 
-The supplied flat parameter format is normalized into an internal object schema at the input boundary.
+The supplied function-definition format is converted into the internal schema models at the input boundary, so the rest of the generation pipeline can work with validated Python objects rather than repeatedly questioning whether the JSON it received is secretly plotting against it.
 
 ### Duplicate-key rejection
 
-Duplicate JSON keys are rejected when reading input and when validating generated output.
+Duplicate JSON keys are rejected both when reading input and when validating generated output.
 
-Python would otherwise quietly keep the later value, which is convenient right up until it absolutely is not.
+Python's normal JSON parser would otherwise quietly keep the later value.
+
+That behaviour is convenient until two values are fighting over the same parameter and the parser resolves the dispute without telling anybody.
 
 ### SDK adapter
 
-`LLMSDKAdapter` isolates the supplied SDK from the rest of the project.
+`LLMSDKAdapter` isolates the supplied `llm_sdk` from the rest of the project.
 
-It converts SDK values into the simple tokenizer and language-model interfaces used by the constrained generation code.
+The rest of the application depends on the project's small `LanguageModel` and `Tokenizer` protocols rather than SDK-specific implementation details.
+
+The adapter exposes the public SDK operations needed by the project:
+
+- encoding text
+- decoding token IDs
+- obtaining next-token scores
+
+This keeps the constrained-generation code independent from the concrete model wrapper.
 
 ### Error handling
 
 Project-specific exceptions separate input failures from generation failures.
 
-At the CLI boundary, known project errors become concise user-facing messages instead of full Python tracebacks.
+Input errors include:
+
+- unreadable files
+- malformed JSON
+- invalid input structures
+
+Generation errors include:
+
+- no valid next token
+- token-limit exhaustion
+- completed output that fails schema validation
+- invalid function selection
+
+At the CLI boundary, known project errors become concise user-facing messages rather than full Python tracebacks.
 
 ## Performance analysis
 
 ### Accuracy
 
-On the supplied 11-prompt dataset:
+On the supplied 11-prompt evaluation dataset:
 
 - function selection was correct for 11/11 prompts
 - all generated parameter objects were valid JSON
 - all generated parameter objects matched the required schemas
+- the complete function calls were accepted for all 11 prompts
 
-Semantic generation still depends on the language model.
+The model is still responsible for semantic generation.
 
-For example, the numeric-regex prompt produced:
+For example, on one numeric-regex prompt it generated:
 
-    34|233
+```text
+34|233
+```
 
 rather than a more general digit pattern.
 
-That regex still performs the requested replacement for the supplied input, but it demonstrates the intended distinction:
+That regex still performs the requested replacement for the supplied input, but it demonstrates an important distinction:
 
 - structural correctness is enforced by the project
-- semantic quality still comes from the model
+- semantic quality still comes from the language model
+
+Constrained decoding can prevent invalid JSON.
+
+It cannot make a 0.6B model suddenly develop several billion additional parameters through force of personality.
 
 ### Speed
 
 A full end-to-end run:
 
-    time uv run python -m src
+```bash
+time uv run python -m src
+```
 
 completed in approximately:
 
-    2 minutes 22 seconds
+```text
+2 minutes 22 seconds
+```
 
-This is comfortably below the five-minute limit.
+This is comfortably below the five-minute evaluation limit.
 
-The main cost is model inference: every generated token requires the supplied SDK to calculate next-token scores again.
+The main cost is model inference because every generated token requires another set of next-token scores.
 
-Token filtering was optimized by checking candidates in descending model-score order and stopping at the first valid token, rather than validating the entire vocabulary every time.
+Token filtering was therefore implemented by considering candidates in descending model-score order and stopping as soon as the highest-scoring valid token is found.
+
+This avoids validating the entire vocabulary when the first few candidates already contain a legal continuation.
 
 ### Reliability
 
-The final automated test suite contains 132 tests, all passing.
+The automated test suite contains **141 tests**.
 
-The project also handles malformed JSON, invalid input models, missing files, duplicate keys, generation failures, and schema mismatches through explicit error paths.
+The suite covers both normal behaviour and failure paths, including:
+
+- malformed JSON
+- missing files
+- invalid Pydantic models
+- duplicate keys
+- invalid JSON syntax
+- schema violations
+- token-generation failures
+- token-limit exhaustion
+- incorrect generated types
+- nested objects and arrays
+
+In addition to pytest, the project is checked with both flake8 and mypy.
 
 ## Challenges faced
 
 ### Recursive schemas
 
-Arrays and objects can contain more arrays and objects, so both schema representation and validation had to support arbitrary nesting.
+Arrays and objects can contain more arrays and objects.
 
-This was solved with recursive Pydantic schema models and recursive validation.
+That means both the schema representation and the validator need to work recursively rather than only handling the flat examples that are easiest to stare at while feeling optimistic.
+
+The project handles nested schemas through recursive Pydantic models and recursive validation/state tracking.
 
 ### Constrained generation
 
-The main design challenge was preventing invalid output without replacing the model's decisions with hardcoded Python logic.
+The main architectural challenge was preventing invalid output without simply replacing model decisions with hardcoded Python logic.
 
 The solution was to separate:
 
-- semantic choice: driven by model scores
-- structural validity: enforced by state machines
+- **semantic choice:** driven by model scores
+- **structural validity:** enforced by the constrained state machines
+
+That lets the model remain responsible for choosing values while the decoder controls what forms those values are allowed to take.
+
+### Literal strings
+
+Small models sometimes transform strings that should be copied exactly.
+
+That became especially visible with template-like prompts containing quotes, braces, or other punctuation.
+
+A narrow preservation rule was therefore added for the specific case where a prompt clearly provides the single required string value after a colon.
+
+The important part was keeping this rule narrow enough that it did not turn into a second, increasingly desperate function-calling system made out of string parsing.
 
 ### Performance
 
-The original token-filtering approach checked too many vocabulary tokens on every generation step.
+The original token-filtering approach checked too many vocabulary tokens during every generation step.
 
-It was replaced with score-first filtering: candidates are ranked by the model first, then checked until the best valid token is found.
+It was replaced with score-first filtering:
+
+1. obtain the model scores
+2. rank candidate tokens by score
+3. test them in that order
+4. stop at the first valid candidate
+
+This preserves the model's preference ordering while avoiding unnecessary validation work.
 
 ### Prompt design
 
 Prompt wording had a surprisingly large effect on generation quality.
 
-The final design uses separate function-selection and parameter-generation prompts and keeps the parameter prompt deliberately compact.
+The final design uses separate function-selection and parameter-generation prompts and keeps the parameter-generation context deliberately focused.
 
-More instructions did not always make the model smarter. Sometimes they merely gave it more rope.
+More instructions did not always make the model smarter.
+
+Sometimes they merely gave it more opportunities to become creatively wrong.
 
 ## Testing strategy
 
 The project uses pytest for automated testing.
 
-The 132 tests cover:
+The **141 tests** cover:
 
 - schema models
 - recursive arrays and objects
@@ -249,48 +397,112 @@ The 132 tests cover:
 - input normalization
 - malformed JSON
 - duplicate keys
-- JSON state
+- JSON syntax state
 - schema state
 - combined constrained state
 - token validation
 - highest-scoring valid-token selection
 - constrained generation
 - function selection
-- retry helpers
+- parameter generation
+- retry behaviour
 - generated-output validation
 - prompt construction
-- SDK adapter behavior
-- CLI loading, generation, and output writing
+- SDK adapter behaviour
+- CLI input loading
+- complete result generation
+- output writing
 - project-specific errors
 
 Style checking uses flake8.
 
-Static type checking uses mypy with strict checks for untyped definitions, unchecked function bodies, unused ignores, and unsafe return types.
+Static type checking uses mypy, including checks for untyped definitions, unchecked function bodies, unused ignores, and unsafe return types.
 
 Run both with:
 
-    make lint
+```bash
+make lint
+```
+
+They can also be run directly:
+
+```bash
+uv run flake8 src tests
+uv run mypy src tests
+```
+
+## Project structure
+
+The main responsibilities are divided between a small set of modules:
+
+- `src/__main__.py`  
+  CLI entry point and overall pipeline coordination.
+
+- `src/models.py`  
+  Strict Pydantic models for prompts, function definitions, and schemas.
+
+- `src/input_loader.py`  
+  JSON loading, duplicate-key detection, normalization, and input validation.
+
+- `src/prompt_builder.py`  
+  Builds the Stage 1 and Stage 2 model contexts.
+
+- `src/function_selector.py`  
+  Performs constrained function-name selection.
+
+- `src/function_call_generator.py`  
+  Coordinates function selection and parameter generation.
+
+- `src/constrained_decoder.py`  
+  Runs token-by-token constrained JSON generation.
+
+- `src/json_state.py`  
+  Tracks whether generated characters remain valid JSON syntax.
+
+- `src/schema_state.py`  
+  Tracks whether generated values remain valid for the required schema.
+
+- `src/constrained_state.py`  
+  Combines JSON syntax and schema constraints.
+
+- `src/token_filter.py`  
+  Selects the highest-scoring token that remains valid.
+
+- `src/schema_validator.py`  
+  Performs final recursive validation of generated Python values.
+
+- `src/generated_output.py`  
+  Parses completed generated JSON and validates it against the schema.
+
+- `src/llm_sdk_adapter.py`  
+  Adapts the supplied SDK to the project's tokenizer/model protocols.
 
 ## Example usage
 
 Running:
 
-    uv run python -m src
+```bash
+uv run python -m src
+```
 
 with a prompt such as:
 
-    What is the sum of 2 and 3?
+```text
+What is the sum of 2 and 3?
+```
 
 can produce:
 
-    {
-      "prompt": "What is the sum of 2 and 3?",
-      "name": "fn_add_numbers",
-      "parameters": {
-        "a": 2,
-        "b": 3
-      }
-    }
+```json
+{
+  "prompt": "What is the sum of 2 and 3?",
+  "name": "fn_add_numbers",
+  "parameters": {
+    "a": 2,
+    "b": 3
+  }
+}
+```
 
 The supplied examples are not hardcoded.
 
@@ -317,4 +529,6 @@ They were used to explain unfamiliar Python concepts, discuss architecture, revi
 
 AI support was used particularly while working through the schema models, JSON/schema state machines, constrained token selection, debugging, testing, typing/compliance work, and documentation.
 
-The project was developed incrementally, with suggestions reviewed, understood, tested, and adjusted before being included in the final implementation.
+The project was developed incrementally. Suggestions were reviewed, understood, tested, rejected when they made things worse — which happened more than once — and adjusted before being included in the final implementation.
+
+That last part turned out to be fairly important.

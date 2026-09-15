@@ -1,7 +1,10 @@
+"""Integration test for the supplied LLM SDK adapter."""
+
 from src.llm_sdk_adapter import LLMSDKAdapter
 
 
 def test_llm_sdk_adapter() -> None:
+    """Expose encoding, decoding, and next-token scores as Python values."""
     adapter = LLMSDKAdapter()
 
     token_ids = adapter.encode("Hello")

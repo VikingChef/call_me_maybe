@@ -1,3 +1,5 @@
+"""Load and validate JSON input files for prompts and function definitions."""
+
 import json
 from pathlib import Path
 
@@ -12,7 +14,7 @@ from src.models import FunctionDefinition, PromptInput
 
 
 def load_json_file(path: str | Path) -> object:
-    """Load JSON from a file while rejecting malformed or duplicate data."""
+    """Load JSON while rejecting malformed data and duplicate object keys."""
     try:
         with open(path) as file:
             return json.load(
@@ -43,7 +45,7 @@ def reject_duplicate_keys(
 
 
 def load_prompt_input(path: str | Path) -> PromptInput:
-    """Load and validate one prompt input from a JSON file."""
+    """Load and validate one prompt object from a JSON file."""
     data = load_json_file(path)
 
     try:
@@ -55,7 +57,7 @@ def load_prompt_input(path: str | Path) -> PromptInput:
 
 
 def load_prompt_inputs(path: str | Path) -> list[PromptInput]:
-    """Load and validate a list of prompt inputs from a JSON file."""
+    """Load and validate a list of prompt objects from a JSON file."""
     data = load_json_file(path)
 
     if not isinstance(data, list):
@@ -91,7 +93,7 @@ def load_function_definition(
 def load_function_definitions(
     path: str | Path,
 ) -> list[FunctionDefinition]:
-    """Load and validate a list of function definitions from a JSON file."""
+    """Load and validate a list of function definitions from JSON."""
     data = load_json_file(path)
 
     if not isinstance(data, list):

@@ -1,20 +1,22 @@
+"""Constrained generation of valid function names."""
+
 from src.language_model import LanguageModel
 from src.tokenizer import Tokenizer
 from src.errors import FunctionSelectionError, TokenLimitError
 
 
 class FunctionNameState:
-    """Track whether generated text can still become a valid function name."""
+    """Track whether generated text can still match a valid function name."""
 
     def __init__(self, function_names: list[str]):
-        """Create state for the available function names."""
+        """Initialize state for the available function names."""
         self.function_names = function_names
         self.text = ""
         self.invalid = False
         self.complete = False
 
     def feed(self, text: str) -> None:
-        """Add generated text and update validity and completion state."""
+        """Add generated text and update validity and completion."""
         if self.invalid or self.complete:
             return
 

@@ -1,13 +1,19 @@
+"""Tests for schema-constrained JSON generation."""
+
 from src.constrained_decoder import generate_constrained_json
 from src.models import NumberSchema, ObjectSchema, StringSchema
 from src.errors import TokenLimitError
 
 
 class FakeTokenizer:
+    """Minimal tokenizer for constrained-decoder tests."""
+
     def encode(self, text: str) -> list[int]:
+        """Satisfy the tokenizer protocol for decode-only tests."""
         return []
 
     def decode(self, token_ids: list[int]) -> str:
+        """Decode predefined token IDs into JSON fragments."""
         token_map = {
             0: "{",
             1: '"x"',
@@ -20,7 +26,10 @@ class FakeTokenizer:
 
 
 class FakeModel:
+    """Return deterministic scores for constrained JSON generation."""
+
     def next_token_scores(self, token_ids: list[int]) -> list[float]:
+        """Return scores that advance through a fixed token sequence."""
         next_token = len(token_ids)
 
         score_sets = [
@@ -35,6 +44,7 @@ class FakeModel:
 
 
 def test_generate_constrained_json_completes_object() -> None:
+    """Generate a complete object matching its schema."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
     schema = ObjectSchema(
@@ -56,6 +66,7 @@ def test_generate_constrained_json_completes_object() -> None:
 
 
 def test_generate_constrained_json_stops_at_token_limit() -> None:
+    """Raise when constrained generation exceeds its token limit."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
     schema = ObjectSchema(
@@ -81,6 +92,7 @@ def test_generate_constrained_json_stops_at_token_limit() -> None:
 
 
 def test_generate_constrained_json_avoids_wrong_schema_token() -> None:
+    """Reject a higher-scoring token when it violates the schema."""
     model = FakeModel()
     tokenizer = FakeTokenizer()
     schema = ObjectSchema(
